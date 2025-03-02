@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+    <link rel="stylesheet" href="../static/styles.css">
+</head>
+{% extends "base.html" %}
+
+
+{% block content %}
+    <h2>Welcome, {{ session.username if session.username else 'Guest' }}</h2>
+    
+    <section class="featured-films">
+        <h3>Now Showing</h3>
+        <div class="film-grid">
+            <!-- Row 1 - First 5 empty movie cells -->
+            {% for i in range(5) %}
+            <div class="film-card">
+                <div class="film-poster">
+                    <img src="{{ url_for('static', filename='placeholder.jpg') }}" alt="Film poster">
+                    <div class="film-overlay">
+                        <a href="{{ url_for('booking') }}" class="book-button">Book Now</a>
+                    </div>
+                </div>
+                <div class="film-info">
+                    <h4><!-- Movie Title Placeholder --></h4>
+                    <p class="film-rating"><!-- Rating Placeholder --></p>
+                    <p class="film-genre"><!-- Genre Placeholder --></p>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Row 2 - Second 5 empty movie cells -->
+            {% for i in range(5) %}
+            <div class="film-card">
+                <div class="film-poster">
+                    <img src="{{ url_for('static', filename='placeholder.jpg') }}" alt="Film poster">
+                    <div class="film-overlay">
+                        <a href="{{ url_for('booking') }}" class="book-button">Book Now</a>
+                    </div>
+                </div>
+                <div class="film-info">
+                    <h4><!-- Movie Title Placeholder --></h4>
+                    <p class="film-rating"><!-- Rating Placeholder --></p>
+                    <p class="film-genre"><!-- Genre Placeholder --></p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    
+    <section class="coming-soon">
+        <h3>Coming Soon</h3>
+        <div class="film-grid">
+            {% for i in range(5) %}
+            <div class="film-card coming-soon-card">
+                <div class="film-poster">
+                    <img src="{{ url_for('static', filename='placeholder.jpg') }}" alt="Film poster">
+                    <div class="film-overlay">
+                        <span class="release-date">Coming Soon</span>
+                    </div>
+                </div>
+                <div class="film-info">
+                    <h4><!-- Movie Title Placeholder --></h4>
+                    <p class="film-rating"><!-- Rating Placeholder --></p>
+                    <p class="film-genre"><!-- Genre Placeholder --></p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}
