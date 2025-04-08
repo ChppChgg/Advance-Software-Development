@@ -1,0 +1,19 @@
+HorizonMoviesApp/
+├── README.md
+├── requirements.txt
+├── setup.py
+├── docs/
+│   ├── design.md         # UML diagrams, architectural decisions, and documentation notes
+│   └── installation_guide.md
+├── src/
+│   ├── main.py           # Entry point for the Tkinter application
+│   ├── base_page.py      # Base class for all GUI pages providing shared functionality
+│   ├── home_page.py      # Home page GUI (landing page)
+│   ├── login_page.py     # Login page; includes secure login features
+│   ├── signup_page.py    # Signup/registration page; handles user registration
+│   ├── booking_page.py   # Booking interface for selecting films and seats, price calculation, etc.
+│   ├── cancellation_page.py  # Allows booking cancellations with defined business rules
+│   ├── admin_page.py     # Admin view to manage film listings, screening management, and reports
+│   ├── manager_page.py   # Manager view for adding new cinemas and listings (with proper access controls)
+│   ├── database.py       # Handles all database operations, schema definitions, and mock data population
+│   └── utils.py          # Utility functions (e.g., common validation, formatting, encryption helpers)
