@@ -88,6 +88,7 @@ def run_application():
     db = Database()
     db.insert_initial_films()
     db.generate_cinemas()
+    db.populate_screens()
     app = HorizonCinemas()
     app.mainloop()
 

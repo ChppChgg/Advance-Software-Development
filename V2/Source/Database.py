@@ -63,10 +63,8 @@ class Database:
             -- Screens within each cinema
             CREATE TABLE IF NOT EXISTS Screens (
                 ScreenID INTEGER PRIMARY KEY AUTOINCREMENT,
-                CinemaID INTEGER NOT NULL,
                 ScreenNumber INTEGER NOT NULL,
-                SeatCapacity INTEGER NOT NULL CHECK(SeatCapacity BETWEEN 50 AND 120),
-                FOREIGN KEY (CinemaID) REFERENCES Cinemas(CinemaID) ON DELETE CASCADE
+                SeatCapacity INTEGER NOT NULL CHECK(SeatCapacity BETWEEN 50 AND 120)
             );
 
             -- Films available for screenings
@@ -295,8 +293,7 @@ class Database:
         finally:
             self.close()
     
-    
-    """ def generate_cinemas(self):
+    def generate_cinemas(self):
         cinemas = [
             ("Bristol Cinema","Bristol", "BS2 0SP","01496 222750",6),
             ("Filton Cinema", "Bristol", "BS16 1QY","01496 222850", 6),
@@ -305,16 +302,46 @@ class Database:
             ("Birmingham Cinema","Birmingham","B16 8LP", "01496 222150", 6),
             ("Birmingham Broad Street Cinema", "Birmingham", "B15 1DA", "01496 222250", 6),
             ("London Paddington Cinema", "London", "W2 1HQ", "01496 222350",6),
-            ("London Victoria Cinema", "London", "SW1V 1JU", "01496 222450",6),
+            ("London Victoria Cinema", "London", "SW1V 1JU", "01496 222450",6)
         ]
+        
+        try: 
+            self.connect()
+            cursor = self.connection.cursor()
+            
+            # Create the table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS Cinemas (
+                CinemaID INTEGER PRIMARY KEY AUTOINCREMENT,
+                CinemaName TEXT NOT NULL,
+                City TEXT NOT NULL,
+                Address TEXT,
+                Phone TEXT,
+                NumberOfScreens INTEGER NOT NULL CHECK(NumberOfScreens <= 6)
+                )
+            ''')
 
-        CinemaID INTEGER PRIMARY KEY AUTOINCREMENT,
-        CinemaName TEXT NOT NULL,
-        City TEXT NOT NULL,
-        Address TEXT,
-        Phone TEXT,
-        NumberOfScreens INTEGER NOT NULL CHECK(NumberOfScreens <= 6)
- """
+            # Check for duplicates and insert only new cinemas
+            for cinema in cinemas:
+                cursor.execute("SELECT COUNT(*) FROM Cinemas WHERE CinemaName = ?", (cinema[0],))
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute('''
+                        INSERT INTO Cinemas (CinemaName, City, Address, Phone, NumberOfScreens)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', cinema)
+
+            self.connection.commit()
+            print("Cinemas inserted successfully.")
+
+            
+            self.connection.commit()
+            print("Films inserted successfully.")
+            
+        except Exception as e:
+            print("Error inserting films:", e)
+        finally:
+            self.close()
+            
 
     def insert_initial_films(self):
         """Insert predefined films into the Films table if they don't already exist."""
@@ -362,6 +389,44 @@ class Database:
             print("Error inserting films:", e)
         finally:
             self.close()
+    
+    def populate_screens(self):
+        screens = [
+            ("1", "120"),
+            ("2", "100"),
+            ("3", "100"),
+            ("4", "80"),
+            ("5", "80"),
+            ("6", "60")
+        ]
+
+        try:
+            self.connect()
+            cursor = self.connection.cursor()
+            
+            # Create the table if it doesn't exist
+            cursor.execute('''
+
+            ''')
+            
+            # Check for duplicates and insert only new titles
+            for screen in screens:
+                cursor.execute("SELECT COUNT(*) FROM Screens WHERE ScreenNumber = ?", (screen[0],))
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute('''
+                        INSERT INTO Screens (ScreenNumber, SeatCapacity)
+                        VALUES (?, ?)
+                    ''', screen)
+
+            self.connection.commit()
+            print("Screens inserted successfully.")
+            
+        except Exception as e:
+            print("Error inserting films:", e)
+        finally:
+            self.close()
+
+
 
 
 
