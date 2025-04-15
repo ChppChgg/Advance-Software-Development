@@ -87,6 +87,7 @@ def run_application():
     """Function to run the Horizon Cinemas application"""
     db = Database()
     db.insert_initial_films()
+    db.generate_cinemas()
     app = HorizonCinemas()
     app.mainloop()
 
