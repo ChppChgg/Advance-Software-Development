@@ -294,6 +294,27 @@ class Database:
             return []
         finally:
             self.close()
+    
+    
+    """ def generate_cinemas(self):
+        cinemas = [
+            ("Bristol Cinema","Bristol", "BS2 0SP","01496 222750",6),
+            ("Filton Cinema", "Bristol", "BS16 1QY","01496 222850", 6),
+            ("Cardiff Cinema","Cardiff", "CF10 1LA", "01496 222950", 6),
+            ("Cardiff Bay Cinema","Cardiff", "CF64 1TQ", "01496 222050",6),
+            ("Birmingham Cinema","Birmingham","B16 8LP", "01496 222150", 6),
+            ("Birmingham Broad Street Cinema", "Birmingham", "B15 1DA", "01496 222250", 6),
+            ("London Paddington Cinema", "London", "W2 1HQ", "01496 222350",6),
+            ("London Victoria Cinema", "London", "SW1V 1JU", "01496 222450",6),
+        ]
+
+        CinemaID INTEGER PRIMARY KEY AUTOINCREMENT,
+        CinemaName TEXT NOT NULL,
+        City TEXT NOT NULL,
+        Address TEXT,
+        Phone TEXT,
+        NumberOfScreens INTEGER NOT NULL CHECK(NumberOfScreens <= 6)
+ """
 
     def insert_initial_films(self):
         """Insert predefined films into the Films table if they don't already exist."""
