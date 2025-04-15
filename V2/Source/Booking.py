@@ -3,7 +3,12 @@ booking page functions
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkcalendar import DateEntry
 from Basepage import BasePage
+from Database import Database 
+from datetime import datetime, timedelta
+import sqlite3
+
 
 class BookingPage(BasePage):
     """Booking page for ticket reservations"""
@@ -39,13 +44,13 @@ class BookingPage(BasePage):
         self.film_combo = ttk.Combobox(
             form_frame,
             font=("Arial", 12),
-            width=30,
+            width=50,  # Wider width for full row formatting
             state="readonly"
         )
         self.film_combo.grid(row=0, column=1, pady=10, padx=10, sticky="w")
-        self.film_combo['values'] = ["Select a film..."]  # Will be populated later
-        self.film_combo.current(0)
-        
+
+        self.load_film_rows()  # This will set the actual list and default selection
+
         # Date selection
         date_label = tk.Label(
             form_frame,
@@ -55,16 +60,21 @@ class BookingPage(BasePage):
         )
         date_label.grid(row=1, column=0, sticky="w", pady=10)
         
-        self.date_combo = ttk.Combobox(
+        today = datetime.today()
+        one_week_later = today + timedelta(weeks=1)
+        
+        self.date_entry = DateEntry(
             form_frame,
             font=("Arial", 12),
             width=30,
-            state="readonly"
+            background="darkblue",  # Customize background color
+            foreground="white",     # Customize text color
+            borderwidth=2,
+            mindate=today,
+            maxdate=one_week_later
         )
-        self.date_combo.grid(row=1, column=1, pady=10, padx=10, sticky="w")
-        self.date_combo['values'] = ["Select a date..."]  # Will be populated later
-        self.date_combo.current(0)
-        
+        self.date_entry.grid(row=1, column=1, pady=10, padx=10, sticky="w")
+            
         # Time selection
         time_label = tk.Label(
             form_frame,
@@ -134,7 +144,22 @@ class BookingPage(BasePage):
             command=self.booking_placeholder
         )
         proceed_button.grid(row=5, column=0, columnspan=2, pady=30)
-        
+    def load_film_rows(self):
+        """Load detailed film rows into the combobox with formatted display"""
+        db = Database("horizon_cinemas.db")
+        self.film_data = db.get_all_film_rows()
+
+        if self.film_data:
+            # Format rows into strings like "Inception | Sci-Fi | 148 min"
+            formatted = [
+                f"{film['Title']} | {film['Genre']} | {film['Duration']} min" for film in self.film_data
+            ]
+            self.film_combo['values'] = formatted
+            self.film_combo.current(0)
+        else:
+            self.film_combo['values'] = ["No films available"]
+            self.film_combo.current(0)
+
     def booking_placeholder(self):
         """Placeholder for booking functionality"""
         messagebox.showinfo("Booking", "Booking functionality will be implemented later")

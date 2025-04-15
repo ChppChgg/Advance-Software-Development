@@ -13,6 +13,7 @@ from Cancel import CancellationPage
 from Admin import AdminPage
 from Manager import ManagerPage
 from Utility import COLORS  # Import colors from utility
+from Database import Database
 
 class HorizonCinemas(tk.Tk):
     """Main application class"""
@@ -84,6 +85,8 @@ class HorizonCinemas(tk.Tk):
 
 def run_application():
     """Function to run the Horizon Cinemas application"""
+    db = Database()
+    db.insert_initial_films()
     app = HorizonCinemas()
     app.mainloop()
 
