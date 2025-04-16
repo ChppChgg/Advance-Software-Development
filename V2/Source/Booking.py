@@ -144,6 +144,7 @@ class BookingPage(BasePage):
             command=self.booking_placeholder
         )
         proceed_button.grid(row=5, column=0, columnspan=2, pady=30)
+    
     def load_film_rows(self):
         """Load detailed film rows into the combobox with formatted display"""
         db = Database("horizon_cinemas.db")
