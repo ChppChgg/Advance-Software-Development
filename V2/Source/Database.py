@@ -102,6 +102,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS Bookings (
                 BookingID INTEGER PRIMARY KEY AUTOINCREMENT,
                 CustomerID INTEGER NOT NULL,
+                CinemaID INTEGER NOT NULL,
                 ScreeningID INTEGER NOT NULL,
                 BookingReference TEXT NOT NULL UNIQUE,
                 TotalPrice REAL NOT NULL,
@@ -109,6 +110,7 @@ class Database:
                 Status TEXT DEFAULT 'active' CHECK(Status IN ('active', 'cancelled')),
                 CancellationFee REAL DEFAULT 0,
                 FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID) ON DELETE CASCADE,
+                FOREIGN KEY (CinemaID) REFERENCES Cinemas(CinemaID) ON DELETE CASCADE,
                 FOREIGN KEY (ScreeningID) REFERENCES Screenings(ScreeningID) ON DELETE CASCADE
             );
 
@@ -283,7 +285,7 @@ class Database:
         try:
             self.connect()
             cursor = self.connection.cursor()
-            cursor.execute("SELECT * FROM Films")  # Replace 'Films' with your actual table name
+            cursor.execute("SELECT * FROM Films")
             rows = cursor.fetchall()
             return rows
         except Exception as e:
@@ -501,6 +503,27 @@ class Database:
             print("Error inserting screenings:", e)
         finally:
             self.close()
+
+    def get_screenings_by_film(self, film_id):
+        """Fetch screening start times by film ID."""
+        try:
+            self.connect()
+            cursor = self.connection.cursor()
+            query = """
+                SELECT ScreeningID, StartTime
+                FROM Screenings
+                WHERE FilmID = ?
+                ORDER BY StartTime
+            """
+            cursor.execute(query, (film_id,))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except Exception as e:
+            print("Error fetching screenings:", e)
+            return []
+        finally:
+            self.close()
+
 
 
 

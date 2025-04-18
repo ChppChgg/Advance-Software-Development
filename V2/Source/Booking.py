@@ -49,6 +49,8 @@ class BookingPage(BasePage):
         )
         self.film_combo.grid(row=0, column=1, pady=10, padx=10, sticky="w")
 
+        self.film_combo.bind("<<ComboboxSelected>>", self.on_film_selected)
+
         self.load_film_rows()  # This will set the actual list and default selection
 
         # Date selection
@@ -90,8 +92,10 @@ class BookingPage(BasePage):
             width=30,
             state="readonly"
         )
+
+        self.time_combo = ttk.Combobox( form_frame, font=("Arial",12), width=30, state="readonly" )
         self.time_combo.grid(row=2, column=1, pady=10, padx=10, sticky="w")
-        self.time_combo['values'] = ["Select a time..."]  # Will be populated later
+        self.time_combo['values'] = ["Select a time..."]
         self.time_combo.current(0)
         
         # Ticket quantity
@@ -160,6 +164,33 @@ class BookingPage(BasePage):
         else:
             self.film_combo['values'] = ["No films available"]
             self.film_combo.current(0)
+    
+    
+    def on_film_selected(self, event):
+        """When a film is chosen, fetch its screening times and fill time_combo."""
+        idx = self.film_combo.current()
+        if idx < 0 or idx >= len(self.film_data):
+            # invalid index
+            self.time_combo['values'] = ["Select a time..."]
+            self.time_combo.current(0)
+            return
+
+        selected_film = self.film_data[idx]
+        film_id = selected_film['FilmID']
+
+        # Query DB for that film's screenings
+        db = Database("horizon_cinemas.db")
+        screenings = db.get_screenings_by_film(film_id)
+
+        # Extract just the times
+        times = [s['StartTime'] for s in screenings]
+
+        if times:
+            self.time_combo['values'] = times
+            self.time_combo.current(0)
+        else:
+            self.time_combo['values'] = ["No screenings available"]
+            self.time_combo.current(0)
 
     def booking_placeholder(self):
         """Placeholder for booking functionality"""
