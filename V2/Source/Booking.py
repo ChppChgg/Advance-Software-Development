@@ -120,6 +120,7 @@ class BookingPage(BasePage):
     def calculate_price(self):
         # Base ticket price
         price = 5.0
+        extraprice = 0.0
         
         # City surcharge
         try:
@@ -136,9 +137,9 @@ class BookingPage(BasePage):
         try:
             hour = int(time_str.split(':')[0])
             if 12 <= hour < 17:
-                price += 1.0
+                extraprice += 1.0
             elif 17 <= hour <= 23:
-                price += 2.0
+                extraprice += 2.0
         except:
             pass  # fallback if time is not selected or invalid
 
@@ -155,7 +156,7 @@ class BookingPage(BasePage):
         except:
             qty = 1
 
-        total = price * qty
+        total = ((price + extraprice) * qty)
         self.price_var.set(f"£{total:.2f}")
 
     def booking_placeholder(self):
