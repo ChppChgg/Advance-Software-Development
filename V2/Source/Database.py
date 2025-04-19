@@ -85,7 +85,6 @@ class Database:
                 ScreenID INTEGER NOT NULL,
                 StartTime TIME NOT NULL,
                 EndTime TIME NOT NULL,
-                BasePrice REAL NOT NULL,
                 FOREIGN KEY (FilmID) REFERENCES Films(FilmID) ON DELETE CASCADE,
                 FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE
             );
@@ -333,10 +332,6 @@ class Database:
 
             self.connection.commit()
             print("Cinemas inserted successfully.")
-
-            
-            self.connection.commit()
-            print("Films inserted successfully.")
             
         except Exception as e:
             print("Error inserting films:", e)
@@ -426,42 +421,42 @@ class Database:
 
     def initial_screenings(self):
         screenings = [
-            (1, 1, "09:00", "11:00", 5),
-            (6, 1, "11:00", "13:30", 5),
-            (2, 1, "13:30", "16:00", 6),
-            (3, 1, "16:00", "18:00", 6),
-            (5, 1, "18:00", "20:00", 7),
-            (4, 1, "20:00", "22:00", 7),
-            (1, 2, "11:00", "13:00", 5),
-            (6, 2, "13:00", "15:30", 6),
-            (2, 2, "15:30", "18:00", 6),
-            (3, 2, "18:00", "20:00", 7),
-            (5, 2, "20:00", "22:00", 7),
-            (4, 2, "22:00", "00:00", 7),
-            (4, 3, "09:00", "11:00", 5),
-            (1, 3, "13:00", "15:00", 6),
-            (6, 3, "15:00", "17:30", 6),
-            (2, 3, "17:30", "20:00", 7),
-            (3, 3, "20:00", "22:00", 7),
-            (5, 3, "22:00", "00:00", 7),
-            (5, 4, "09:00", "11:00", 5),
-            (4, 4, "11:00", "13:00", 5),
-            (1, 4, "15:00", "17:00", 6),
-            (6, 4, "17:00", "19:30", 7),
-            (2, 4, "19:30", "22:00", 7),
-            (3, 4, "22:00", "00:00", 7),
-            (3, 5, "09:00", "11:00", 5),
-            (5, 5, "11:00", "13:00", 5),
-            (4, 5, "13:00", "15:00", 6),
-            (1, 5, "17:00", "19:00", 7),
-            (6, 5, "19:00", "21:30", 7),
-            (2, 5, "21:30", "00:00", 7),
-            (2, 6, "09:00", "11:30", 5),
-            (3, 6, "11:30", "13:30", 5),
-            (5, 6, "13:30", "15:30", 6),
-            (4, 6, "15:30", "17:30", 6),
-            (1, 6, "19:30", "21:30", 7),
-            (6, 6, "21:30", "00:00", 7)
+            (1, 1, "09:00", "11:00"),
+            (6, 1, "11:00", "13:30"),
+            (2, 1, "13:30", "16:00"),
+            (3, 1, "16:00", "18:00"),
+            (5, 1, "18:00", "20:00"),
+            (4, 1, "20:00", "22:00"),
+            (1, 2, "11:00", "13:00"),
+            (6, 2, "13:00", "15:30"),
+            (2, 2, "15:30", "18:00"),
+            (3, 2, "18:00", "20:00"),
+            (5, 2, "20:00", "22:00"),
+            (4, 2, "22:00", "00:00"),
+            (4, 3, "09:00", "11:00"),
+            (1, 3, "13:00", "15:00"),
+            (6, 3, "15:00", "17:30"),
+            (2, 3, "17:30", "20:00"),
+            (3, 3, "20:00", "22:00"),
+            (5, 3, "22:00", "00:00"),
+            (5, 4, "09:00", "11:00"),
+            (4, 4, "11:00", "13:00"),
+            (1, 4, "15:00", "17:00"),
+            (6, 4, "17:00", "19:30"),
+            (2, 4, "19:30", "22:00"),
+            (3, 4, "22:00", "00:00"),
+            (3, 5, "09:00", "11:00"),
+            (5, 5, "11:00", "13:00"),
+            (4, 5, "13:00", "15:00"),
+            (1, 5, "17:00", "19:00"),
+            (6, 5, "19:00", "21:30"),
+            (2, 5, "21:30", "00:00"),
+            (2, 6, "09:00", "11:30"),
+            (3, 6, "11:30", "13:30"),
+            (5, 6, "13:30", "15:30"),
+            (4, 6, "15:30", "17:30"),
+            (1, 6, "19:30", "21:30"),
+            (6, 6, "21:30", "00:00")
         ]
 
         try:
@@ -476,7 +471,6 @@ class Database:
                     ScreenID INTEGER NOT NULL,
                     StartTime TIME NOT NULL,
                     EndTime TIME NOT NULL,
-                    BasePrice REAL NOT NULL,
                     FOREIGN KEY (FilmID) REFERENCES Films(FilmID) ON DELETE CASCADE,
                     FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE
                 );
@@ -484,16 +478,16 @@ class Database:
 
             # Check for duplicates and insert only new screenings
             for screening in screenings:
-                film_id, screen_id, start_time, end_time, base_price = screening
+                film_id, screen_id, start_time, end_time, = screening
                 cursor.execute('''
                     SELECT COUNT(*) FROM Screenings
-                    WHERE FilmID = ? AND ScreenID = ? AND StartTime = ? AND EndTime = ? AND BasePrice = ?
-                ''', (film_id, screen_id, start_time, end_time, base_price))
-                
+                    WHERE FilmID = ? AND ScreenID = ? AND StartTime = ? AND EndTime = ?
+                ''', (film_id, screen_id, start_time, end_time))
+            
                 if cursor.fetchone()[0] == 0:
                     cursor.execute('''
-                        INSERT INTO Screenings (FilmID, ScreenID, StartTime, EndTime, BasePrice)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT INTO Screenings (FilmID, ScreenID, StartTime, EndTime)
+                        VALUES (?, ?, ?, ?)
                     ''', screening)
 
             self.connection.commit()
