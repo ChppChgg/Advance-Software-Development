@@ -523,6 +523,20 @@ class Database:
             return []
         finally:
             self.close()
+    
+    def get_all_cinema_rows(self):
+        """Fetch all film records from the database."""
+        try:
+            self.connect()
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM Cinemas")
+            rows = cursor.fetchall()
+            return rows
+        except Exception as e:
+            print("Error fetching Cinemas:", e)
+            return []
+        finally:
+            self.close()
 
 
 
