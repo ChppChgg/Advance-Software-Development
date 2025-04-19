@@ -62,7 +62,14 @@ class BasePage(tk.Frame):
         )
         self.sidebar_title.pack(pady=(20, 10))
         
-        # Navigation buttons will be added by update_sidebar method
+        # Frame for navigation buttons (top)
+        self.sidebar_nav_frame = tk.Frame(self.sidebar_frame, bg=COLORS["SIDEBAR_BG"])
+        self.sidebar_nav_frame.pack(fill="both", expand=True, side="top")
+
+        # Frame for logout button (bottom)
+        self.sidebar_logout_frame = tk.Frame(self.sidebar_frame, bg=COLORS["SIDEBAR_BG"])
+        self.sidebar_logout_frame.pack(fill="x", side="bottom", pady=10)
+
         self.nav_buttons = {}
         
         # Content frame - this will be filled by child classes
@@ -85,32 +92,37 @@ class BasePage(tk.Frame):
     def update_sidebar(self, is_logged_in=False, is_admin=False):
         """Update sidebar based on login status and user role"""
         # Clear existing buttons
-        for widget in self.sidebar_frame.winfo_children():
-            if widget != self.sidebar_title:
-                widget.destroy()
+        for widget in self.sidebar_nav_frame.winfo_children():
+            widget.destroy()
+        for widget in self.sidebar_logout_frame.winfo_children():
+            widget.destroy()
         
         self.nav_buttons = {}
         
         # Basic navigation for all users
-        self.add_nav_button("Home", lambda: self.controller.show_frame("HomePage"))
+        self.add_nav_button("Home", lambda: self.controller.show_frame("HomePage"), parent=self.sidebar_nav_frame)
         
         if not is_logged_in:
-            self.add_nav_button("Login", lambda: self.controller.show_frame("LoginPage"))
-            self.add_nav_button("Sign Up", lambda: self.controller.show_frame("SignupPage"))
+            self.add_nav_button("Login", lambda: self.controller.show_frame("LoginPage"), parent=self.sidebar_nav_frame)
+            self.add_nav_button("Sign Up", lambda: self.controller.show_frame("SignupPage"), parent=self.sidebar_nav_frame)
         else:
-            self.add_nav_button("Book Tickets", lambda: self.controller.show_frame("BookingPage"))
-            self.add_nav_button("My Bookings", lambda: self.controller.show_frame("CancellationPage"))
-            self.add_nav_button("Logout", self.controller.logout)
+            self.add_nav_button("Book Tickets", lambda: self.controller.show_frame("BookingPage"), parent=self.sidebar_nav_frame)
+            self.add_nav_button("My Bookings", lambda: self.controller.show_frame("CancellationPage"), parent=self.sidebar_nav_frame)
             
             # Admin-specific navigation
             if is_admin:
-                self.add_nav_button("Admin Panel", lambda: self.controller.show_frame("AdminPage"))
-                self.add_nav_button("Manager View", lambda: self.controller.show_frame("ManagerPage"))
-        
-    def add_nav_button(self, text, command):
+                self.add_nav_button("Admin Panel", lambda: self.controller.show_frame("AdminPage"), parent=self.sidebar_nav_frame)
+                self.add_nav_button("Manager View", lambda: self.controller.show_frame("ManagerPage"), parent=self.sidebar_nav_frame)
+            
+            # Logout button at the bottom
+            self.add_nav_button("Logout", self.controller.logout, parent=self.sidebar_logout_frame)
+            
+    def add_nav_button(self, text, command, parent=None):
         """Add a navigation button to the sidebar"""
+        if parent is None:
+            parent = self.sidebar_frame
         button = tk.Button(
-            self.sidebar_frame,
+            parent,
             text=text,
             font=("Arial", 11),
             bg=COLORS["SIDEBAR_BG"],  # Use COLORS dictionary
