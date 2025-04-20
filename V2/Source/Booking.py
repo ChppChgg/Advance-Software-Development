@@ -199,6 +199,15 @@ class BookingPage(BasePage):
             show_date = self.date_entry.get_date().strftime("%Y-%m-%d")
             show_time = self.time_combo.get()
 
+            # Seat type (normalize naming)
+            seat_label = self.seat_combo.get()
+            seat_type_map = {
+                "Lower Hall": "Lower",
+                "Upper Gallery": "Upper",
+                "VIP": "VIP"
+            }
+            seat_type = seat_type_map.get(seat_label)
+
             # Find matching screening ID
             # Find matching screening ID
             screenings = db.get_screenings_by_film(film_id)
@@ -218,7 +227,7 @@ class BookingPage(BasePage):
             # Generate unique booking reference
             booking_ref = str(uuid.uuid4())[:8].upper()  # Simple unique code, e.g., 'A3F9D2B1'
 
-            bookingdatetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            bookingdate = self.date_entry.get_date().strftime("%Y-%m-%d")
 
             status = 'active'
 
@@ -233,7 +242,8 @@ class BookingPage(BasePage):
                 total_price=total_price,
                 cancellationfee=cancellationfee,
                 quantity=quantity,
-                bookingdatetime=bookingdatetime,
+                bookingdate=bookingdate,
+                seat_type=seat_type,
                 status=status
             )
 

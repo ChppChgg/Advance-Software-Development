@@ -86,8 +86,13 @@ class Database:
                 ScreenID INTEGER NOT NULL,
                 StartTime TIME NOT NULL,
                 EndTime TIME NOT NULL,
+                TotalSeats INTEGER NOT NULL,
+                VIPSeats INTEGER NOT NULL DEFAULT 10,
+                LowerSeats INTEGER NOT NULL,
+                UpperSeats INTEGER NOT NULL,
+                FOREIGN KEY (TotalSeats) REFERENCES Screens(SeatCapacity) ON DELETE CASCADE,
                 FOREIGN KEY (FilmID) REFERENCES Films(FilmID) ON DELETE CASCADE,
-                FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE
+                FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE         
             );
 
             -- Customers who book tickets (could also reference Users)
@@ -106,8 +111,7 @@ class Database:
                 ScreeningID INTEGER NOT NULL,
                 BookingReference TEXT NOT NULL UNIQUE,
                 TotalPrice REAL NOT NULL,
-                BookingDateTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                Quantity INTEGER NOT NULL,
+                BookingDate DATE NOT NULL,
                 Status TEXT DEFAULT 'active' CHECK(Status IN ('active', 'cancelled')),
                 CancellationFee REAL DEFAULT 0,
                 FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID) ON DELETE CASCADE,
@@ -115,24 +119,14 @@ class Database:
                 FOREIGN KEY (ScreeningID) REFERENCES Screenings(ScreeningID) ON DELETE CASCADE
             );
 
-            -- Seats in each screen
-            CREATE TABLE IF NOT EXISTS Seats (
-                SeatID INTEGER PRIMARY KEY AUTOINCREMENT,
-                ScreenID INTEGER NOT NULL,
-                SeatNumber TEXT NOT NULL,
-                SeatType TEXT NOT NULL CHECK(SeatType IN ('Lower Hall', 'Upper Gallery', 'VIP')),
-                FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE
-            );
-
             -- Individual seats booked within a booking
             CREATE TABLE IF NOT EXISTS BookingSeats (
                 BookingSeatID INTEGER PRIMARY KEY AUTOINCREMENT,
                 BookingID INTEGER NOT NULL,
-                SeatID INTEGER NOT NULL,
-                FOREIGN KEY (BookingID) REFERENCES Bookings(BookingID) ON DELETE CASCADE,
-                FOREIGN KEY (SeatID) REFERENCES Seats(SeatID) ON DELETE CASCADE,
-                UNIQUE(BookingID, SeatID)
+                SeatType TEXT NOT NULL CHECK (SeatType IN ('VIP', 'Lower', 'Upper')),
+                FOREIGN KEY (BookingID) REFERENCES Bookings(BookingID) ON DELETE CASCADE
             );
+
         ''')
         
         # Insert default roles if they don't exist
@@ -473,24 +467,40 @@ class Database:
                     ScreenID INTEGER NOT NULL,
                     StartTime TIME NOT NULL,
                     EndTime TIME NOT NULL,
+                    TotalSeats INTEGER NOT NULL,
+                    VIPSeats INTEGER NOT NULL DEFAULT 10,
+                    LowerSeats INTEGER NOT NULL,
+                    UpperSeats INTEGER NOT NULL,
+                    FOREIGN KEY (TotalSeats) REFERENCES Screens(SeatCapacity) ON DELETE CASCADE,
                     FOREIGN KEY (FilmID) REFERENCES Films(FilmID) ON DELETE CASCADE,
                     FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE
                 );
             ''')
 
-            # Check for duplicates and insert only new screenings
-            for screening in screenings:
-                film_id, screen_id, start_time, end_time, = screening
+            for film_id, screen_id, start_time, end_time in screenings:
+                # Get the total seat capacity for this screen
+                cursor.execute("SELECT SeatCapacity FROM Screens WHERE ScreenID = ?", (screen_id,))
+                result = cursor.fetchone()
+                if not result:
+                    print(f"ScreenID {screen_id} not found, skipping.")
+                    continue
+
+                total_seats = result[0]
+                vip_seats = 10
+                lower_seats = int(total_seats * 0.3)
+                upper_seats = total_seats - vip_seats - lower_seats
+
+                # Check for duplicate screening
                 cursor.execute('''
                     SELECT COUNT(*) FROM Screenings
                     WHERE FilmID = ? AND ScreenID = ? AND StartTime = ? AND EndTime = ?
                 ''', (film_id, screen_id, start_time, end_time))
-            
+
                 if cursor.fetchone()[0] == 0:
                     cursor.execute('''
-                        INSERT INTO Screenings (FilmID, ScreenID, StartTime, EndTime)
-                        VALUES (?, ?, ?, ?)
-                    ''', screening)
+                        INSERT INTO Screenings (FilmID, ScreenID, StartTime, EndTime, TotalSeats, VIPSeats, LowerSeats, UpperSeats)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (film_id, screen_id, start_time, end_time, total_seats, vip_seats, lower_seats, upper_seats))
 
             self.connection.commit()
             print("Screenings inserted successfully.")
@@ -534,7 +544,7 @@ class Database:
         finally:
             self.close()
 
-    def insert_booking(self, customer_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, quantity, bookingdatetime, status):
+    def insert_booking(self, customer_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, quantity, bookingdate, status, seat_type):
         try:
             self.connect()
             cursor = self.connection.cursor()
@@ -545,12 +555,12 @@ class Database:
                     ScreeningID,
                     BookingReference,
                     TotalPrice,
-                    BookingDateTime,
+                    BookingDate,
                     Quantity,
                     Status,
                     CancellationFee
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (customer_id, cinema_id, screening_id, booking_ref, total_price, bookingdatetime, quantity, status, cancellationfee))
+            """, (customer_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, quantity, status, cancellationfee))
             self.connection.commit()
         except Exception as e:
             print("Error inserting booking:", e)
@@ -568,5 +578,22 @@ class Database:
         cursor.execute(query, (name, email, phone))
         self.connection.commit()
         return cursor.lastrowid
+    
+    def get_booked_seats_by_type(self, screening_id, booking_date):
+        self.connect()
+        cursor = self.connection.cursor()
+        
+        cursor.execute('''
+            SELECT SeatType, COUNT(*) AS Count
+            FROM Bookings
+            JOIN BookingSeats ON Bookings.BookingID = BookingSeats.BookingID
+            WHERE ScreeningID = ? AND BookingDate = ? AND Status = 'active'
+            GROUP BY SeatType
+        ''', (screening_id, booking_date))
+        
+        rows = cursor.fetchall()
+        self.close()
+        return {row["SeatType"]: row["Count"] for row in rows}
+
 
 
