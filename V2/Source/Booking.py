@@ -35,7 +35,7 @@ class BookingPage(BasePage):
             .grid(row=1, column=0, sticky="w", pady=10)
         self.film_combo = ttk.Combobox(form_frame, font=("Arial", 12), width=50, state="readonly")
         self.film_combo.grid(row=1, column=1, pady=10, padx=10, sticky="w")
-        self.film_combo.bind("<<ComboboxSelected>>", lambda e: self.calculate_price())
+        self.film_combo.bind("<<ComboboxSelected>>", self.on_film_selected)
 
         # Date
         tk.Label(form_frame, text="Select Date:", font=("Arial", 12), bg="white") \
