@@ -4,6 +4,7 @@ from tkcalendar import DateEntry
 from Basepage import BasePage
 from Database import Database
 from datetime import datetime, timedelta
+import uuid
 
 class BookingPage(BasePage):
     """Booking page for ticket reservations"""
@@ -81,11 +82,29 @@ class BookingPage(BasePage):
                                     font=("Arial", 12, "bold"), bg="white")
         self.price_label.grid(row=6, column=1, sticky="w", pady=10)
 
+        # Customer name
+        tk.Label(form_frame, text="Full Name:", font=("Arial", 12), bg="white") \
+            .grid(row=7, column=0, sticky="w", pady=10)
+        self.name_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
+        self.name_entry.grid(row=7, column=1, pady=10, padx=10, sticky="w")
+
+        # Email
+        tk.Label(form_frame, text="Email:", font=("Arial", 12), bg="white") \
+            .grid(row=8, column=0, sticky="w", pady=10)
+        self.email_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
+        self.email_entry.grid(row=8, column=1, pady=10, padx=10, sticky="w")
+
+        # Phone
+        tk.Label(form_frame, text="Phone Number:", font=("Arial", 12), bg="white") \
+            .grid(row=9, column=0, sticky="w", pady=10)
+        self.phone_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
+        self.phone_entry.grid(row=9, column=1, pady=10, padx=10, sticky="w")
+
         # Proceed
         tk.Button(form_frame, text="Proceed to Seat Selection",
                   font=("Arial",12,"bold"), bg="#1E3F66", fg="white",
                   padx=20, pady=8, command=self.booking_placeholder) \
-            .grid(row=7, column=0, columnspan=2, pady=30)
+            .grid(row=10, column=0, columnspan=2, pady=30)
 
         # Load data
         self.load_cinema_rows()
@@ -160,4 +179,65 @@ class BookingPage(BasePage):
         self.price_var.set(f"£{total:.2f}")
 
     def booking_placeholder(self):
-        messagebox.showinfo("Booking", "Booking functionality will be implemented later")
+        try:
+            db = Database("horizon_cinemas.db")
+
+            quantity = int(self.ticket_spinbox.get())
+
+            name = self.name_entry.get().strip()
+            email = self.email_entry.get().strip()
+            phone = self.phone_entry.get().strip()
+
+            # Get selected cinema and film
+            cinema_idx = self.cinema_combo.current()
+            cinema_id = self.cinema_data[cinema_idx]['CinemaID']
+
+            film_idx = self.film_combo.current()
+            film_id = self.film_data[film_idx]['FilmID']
+
+            # Get selected date and time
+            show_date = self.date_entry.get_date().strftime("%Y-%m-%d")
+            show_time = self.time_combo.get()
+
+            # Find matching screening ID
+            # Find matching screening ID
+            screenings = db.get_screenings_by_film(film_id)
+            matching_screening = next(
+                (s for s in screenings if s['StartTime'] == show_time), None
+            )
+            if not matching_screening:
+                messagebox.showerror("Error", "No matching screening found.")
+                return
+
+            screening_id = matching_screening['ScreeningID']
+
+            # Total price
+            total_price = float(self.price_var.get().replace("£", ""))
+            cancellationfee = (total_price/2)
+
+            # Generate unique booking reference
+            booking_ref = str(uuid.uuid4())[:8].upper()  # Simple unique code, e.g., 'A3F9D2B1'
+
+            bookingdatetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            status = 'active'
+
+            customer_id = db.insert_customer(name, email, phone)
+
+            # Insert booking
+            db.insert_booking(
+                customer_id = customer_id,
+                cinema_id=cinema_id,
+                screening_id=screening_id,
+                booking_ref=booking_ref,
+                total_price=total_price,
+                cancellationfee=cancellationfee,
+                quantity=quantity,
+                bookingdatetime=bookingdatetime,
+                status=status
+            )
+
+            messagebox.showinfo("Success", f"Booking successful!\nReference: {booking_ref}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save booking:\n{e}")

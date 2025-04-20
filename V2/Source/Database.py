@@ -3,6 +3,7 @@ Database functions
 """
 import sqlite3
 import os
+import uuid
 import hashlib
 from datetime import datetime, timedelta
 
@@ -106,6 +107,7 @@ class Database:
                 BookingReference TEXT NOT NULL UNIQUE,
                 TotalPrice REAL NOT NULL,
                 BookingDateTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                Quantity INTEGER NOT NULL,
                 Status TEXT DEFAULT 'active' CHECK(Status IN ('active', 'cancelled')),
                 CancellationFee REAL DEFAULT 0,
                 FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID) ON DELETE CASCADE,
@@ -532,8 +534,39 @@ class Database:
         finally:
             self.close()
 
+    def insert_booking(self, customer_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, quantity, bookingdatetime, status):
+        try:
+            self.connect()
+            cursor = self.connection.cursor()
+            cursor.execute("""
+                INSERT INTO Bookings (
+                    CustomerID,
+                    CinemaID,
+                    ScreeningID,
+                    BookingReference,
+                    TotalPrice,
+                    BookingDateTime,
+                    Quantity,
+                    Status,
+                    CancellationFee
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (customer_id, cinema_id, screening_id, booking_ref, total_price, bookingdatetime, quantity, status, cancellationfee))
+            self.connection.commit()
+        except Exception as e:
+            print("Error inserting booking:", e)
+            return []
+        finally:
+            self.close()
 
-
-
+    def insert_customer(self, name, email, phone):
+        self.connect()
+        cursor = self.connection.cursor()
+        query = """
+            INSERT INTO Customers (FullName, Email, PhoneNumber)
+            VALUES (?, ?, ?)
+        """
+        cursor.execute(query, (name, email, phone))
+        self.connection.commit()
+        return cursor.lastrowid
 
 
