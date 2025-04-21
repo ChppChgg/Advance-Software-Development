@@ -98,9 +98,8 @@ class Database:
             -- Customers who book tickets (could also reference Users)
             CREATE TABLE IF NOT EXISTS Customers (
                 CustomerID INTEGER PRIMARY KEY AUTOINCREMENT,
-                FullName TEXT NOT NULL,
-                Email TEXT UNIQUE NOT NULL,
-                PhoneNumber TEXT NOT NULL
+                FullName Text NOT NULL,
+                Email TEXT UNIQUE NOT NULL
             );
 
             -- Ticket bookings
@@ -222,7 +221,7 @@ class Database:
             self.close()
             return False, f"Error: {e}"
     
-    def add_customer(self, full_name, email, phone_number=""):
+    def add_customer(self, full_name, email):
         """Add a new customer to the database"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -237,8 +236,8 @@ class Database:
             else:
                 # Insert new customer
                 cursor.execute(
-                    "INSERT INTO Customers (FullName, Email, PhoneNumber) VALUES (?, ?, ?)",
-                    (full_name, email, phone_number)
+                    "INSERT INTO Customers (FullName, Email) VALUES (?, ?)",
+                    (full_name, email)
                 )
                 conn.commit()
                 customer_id = cursor.lastrowid
@@ -516,7 +515,7 @@ class Database:
             self.connect()
             cursor = self.connection.cursor()
             query = """
-                SELECT ScreeningID, StartTime
+                SELECT ScreeningID, ScreenID, StartTime
                 FROM Screenings
                 WHERE FilmID = ?
                 ORDER BY StartTime
@@ -544,7 +543,7 @@ class Database:
         finally:
             self.close()
 
-    def insert_booking(self, customer_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, quantity, bookingdate, status, seat_type):
+    def insert_booking(self, customer_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, bookingdate, status):
         try:
             self.connect()
             cursor = self.connection.cursor()
@@ -556,44 +555,58 @@ class Database:
                     BookingReference,
                     TotalPrice,
                     BookingDate,
-                    Quantity,
                     Status,
                     CancellationFee
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (customer_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, quantity, status, cancellationfee))
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (customer_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, status, cancellationfee))
+            booking_id = cursor.lastrowid
             self.connection.commit()
         except Exception as e:
             print("Error inserting booking:", e)
             return []
         finally:
             self.close()
-
-    def insert_customer(self, name, email, phone):
-        self.connect()
-        cursor = self.connection.cursor()
-        query = """
-            INSERT INTO Customers (FullName, Email, PhoneNumber)
-            VALUES (?, ?, ?)
-        """
-        cursor.execute(query, (name, email, phone))
-        self.connection.commit()
-        return cursor.lastrowid
+            return booking_id
     
-    def get_booked_seats_by_type(self, screening_id, booking_date):
+    def get_booked_seat_counts(self, screening_id, booking_date):
         self.connect()
         cursor = self.connection.cursor()
-        
-        cursor.execute('''
-            SELECT SeatType, COUNT(*) AS Count
-            FROM Bookings
-            JOIN BookingSeats ON Bookings.BookingID = BookingSeats.BookingID
-            WHERE ScreeningID = ? AND BookingDate = ? AND Status = 'active'
+        cursor.execute("""
+            SELECT SeatType, COUNT(*) as Count
+            FROM BookingSeats bs
+            JOIN Bookings b ON b.BookingID = bs.BookingID
+            WHERE b.ScreeningID = ? AND b.BookingDate = ? AND b.Status = 'active'
             GROUP BY SeatType
-        ''', (screening_id, booking_date))
+        """, (screening_id, booking_date))
         
-        rows = cursor.fetchall()
+        results = cursor.fetchall()
         self.close()
-        return {row["SeatType"]: row["Count"] for row in rows}
+
+        # Convert to dictionary like {'VIP': 5, 'Lower': 12, 'Upper': 30}
+        return {row[0]: row[1] for row in results}
+    
+    def insert_booking_seat(self, booking_id, seat_type):
+            self.connect()
+            cursor = self.connection.cursor()
+            cursor.execute("""
+                INSERT INTO BookingSeats (BookingID, SeatType)
+                VALUES (?, ?)
+            """, (booking_id, seat_type))
+            self.connection.commit()
+            self.close()
+
+    def get_screen_info(self, screen_id):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT * FROM Screens WHERE ScreenID = ?", (screen_id,))
+        result = cursor.fetchone()
+        self.close()
+        return dict(result) if result else None
+
+
+    
+
+
 
 
 

@@ -94,12 +94,6 @@ class BookingPage(BasePage):
         self.email_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
         self.email_entry.grid(row=8, column=1, pady=10, padx=10, sticky="w")
 
-        # Phone
-        tk.Label(form_frame, text="Phone Number:", font=("Arial", 12), bg="white") \
-            .grid(row=9, column=0, sticky="w", pady=10)
-        self.phone_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
-        self.phone_entry.grid(row=9, column=1, pady=10, padx=10, sticky="w")
-
         # Proceed
         tk.Button(form_frame, text="Proceed to Seat Selection",
                   font=("Arial",12,"bold"), bg="#1E3F66", fg="white",
@@ -184,9 +178,9 @@ class BookingPage(BasePage):
 
             quantity = int(self.ticket_spinbox.get())
 
-            name = self.name_entry.get().strip()
+            full_name = self.name_entry.get().strip()
             email = self.email_entry.get().strip()
-            phone = self.phone_entry.get().strip()
+
 
             # Get selected cinema and film
             cinema_idx = self.cinema_combo.current()
@@ -199,16 +193,6 @@ class BookingPage(BasePage):
             show_date = self.date_entry.get_date().strftime("%Y-%m-%d")
             show_time = self.time_combo.get()
 
-            # Seat type (normalize naming)
-            seat_label = self.seat_combo.get()
-            seat_type_map = {
-                "Lower Hall": "Lower",
-                "Upper Gallery": "Upper",
-                "VIP": "VIP"
-            }
-            seat_type = seat_type_map.get(seat_label)
-
-            # Find matching screening ID
             # Find matching screening ID
             screenings = db.get_screenings_by_film(film_id)
             matching_screening = next(
@@ -219,6 +203,36 @@ class BookingPage(BasePage):
                 return
 
             screening_id = matching_screening['ScreeningID']
+            screen_id = matching_screening['ScreenID']
+
+            screen_info = db.get_screen_info(screen_id)
+            if not screen_info:
+                messagebox.showerror("Error", "Screen information not found.")
+                return
+
+            total_seats = screen_info['SeatCapacity']
+
+            # Get seat type and quantity from user
+            seat_type = self.seat_combo.get()
+            seat_type = seat_type.replace("Lower Hall", "Lower").replace("Upper Gallery", "Upper")
+            quantity = int(self.ticket_spinbox.get())
+
+            # Get seat limits from the Screening info
+            max_vip = 10
+            max_lower = int(total_seats * 0.3)
+            max_upper = total_seats - max_lower - max_vip
+
+            # Get currently booked seats for this screening on this date
+            booked_seats = db.get_booked_seat_counts(screening_id, show_date)
+            already_booked = booked_seats.get(seat_type, 0)
+
+            # Determine max seats allowed based on seat type
+            seat_limits = {'VIP': max_vip, 'Lower': max_lower, 'Upper': max_upper}
+            remaining = seat_limits[seat_type] - already_booked
+
+            if quantity > remaining:
+                messagebox.showerror("Booking Error", f"Only {remaining} {seat_type} seats available.")
+                return
 
             # Total price
             total_price = float(self.price_var.get().replace("£", ""))
@@ -231,21 +245,22 @@ class BookingPage(BasePage):
 
             status = 'active'
 
-            customer_id = db.insert_customer(name, email, phone)
+            customer_id = db.add_customer(full_name, email)
 
             # Insert booking
-            db.insert_booking(
+            booking_id = db.insert_booking(
                 customer_id = customer_id,
                 cinema_id=cinema_id,
                 screening_id=screening_id,
                 booking_ref=booking_ref,
                 total_price=total_price,
                 cancellationfee=cancellationfee,
-                quantity=quantity,
                 bookingdate=bookingdate,
-                seat_type=seat_type,
                 status=status
             )
+
+            for _ in range(quantity):
+                db.insert_booking_seat(booking_id, seat_type)
 
             messagebox.showinfo("Success", f"Booking successful!\nReference: {booking_ref}")
 
