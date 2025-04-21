@@ -171,6 +171,7 @@ class BookingPage(BasePage):
 
         total = ((price + extraprice) * qty)
         self.price_var.set(f"£{total:.2f}")
+        
 
     def booking_placeholder(self):
         try:
