@@ -7,6 +7,10 @@ import random
 import string
 from datetime import datetime, timedelta
 
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
+
 # Color scheme constants for consistent application styling
 COLORS = {
     "MAIN_BG": "#F9F9F9",        # Light gray background behind main content

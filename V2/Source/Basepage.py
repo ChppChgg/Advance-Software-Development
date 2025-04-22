@@ -3,7 +3,11 @@ Base page, carries sidebar, header, footer, etc.
 """
 import tkinter as tk
 from tkinter import ttk
-from Utility import COLORS, FONTS  
+from Utility import COLORS, FONTS 
+
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
 
 class BasePage(tk.Frame):
     """Base class for all pages with common layout elements"""

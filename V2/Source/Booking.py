@@ -6,6 +6,10 @@ from Database import Database
 from datetime import datetime, timedelta
 import uuid
 
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
+
 class BookingPage(BasePage):
     """Booking page for ticket reservations"""
     def __init__(self, parent, controller):

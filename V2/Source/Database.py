@@ -7,6 +7,10 @@ import uuid
 import hashlib
 from datetime import datetime, timedelta
 
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
+
 class Database:
     """Database manager class for Horizon Cinemas"""
     

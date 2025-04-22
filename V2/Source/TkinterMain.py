@@ -15,6 +15,10 @@ from Manager import ManagerPage
 from Utility import COLORS  # Import colors from utility
 from Database import Database
 
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
+
 class HorizonCinemas(tk.Tk):
     """Main application class"""
     def __init__(self, *args, **kwargs):

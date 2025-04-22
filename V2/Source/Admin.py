@@ -5,6 +5,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from Basepage import BasePage
 
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
+
 class AdminPage(BasePage):
     """Admin page for system management"""
     def __init__(self, parent, controller):

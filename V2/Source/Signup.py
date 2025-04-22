@@ -4,6 +4,10 @@ from Basepage import BasePage
 from Utility import COLORS, FONTS, validate_email, validate_password
 from Database import Database
 
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
+
 class SignupPage(BasePage):
     """Signup page for user registration"""
     def __init__(self, parent, controller):

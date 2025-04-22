@@ -8,6 +8,9 @@ import sqlite3
 from Database import Database
 from datetime import datetime
 
+#Harry Elson, 23021935
+#Matt Nogodula, 23015215
+#Jerry Lin, 23024553
 
 class CancellationPage(BasePage):
     """Page for viewing and cancelling bookings"""
