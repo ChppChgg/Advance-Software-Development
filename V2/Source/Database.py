@@ -640,6 +640,28 @@ class Database:
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
+    def cancel_booking_by_reference(self, booking_ref):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            UPDATE Bookings
+            SET Status = 'cancelled'
+            WHERE BookingReference = ? AND Status != 'cancelled'
+        """, (booking_ref,))
+        self.connection.commit()
+        return cursor.rowcount > 0  # Returns True if a row was updated
+
+    def get_cancellation_fee(self, booking_ref):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            SELECT CancellationFee FROM Bookings
+            WHERE BookingReference = ?
+        """, (booking_ref,))
+        row = cursor.fetchone()
+        self.close()
+        return row[0] if row else None
+
         
 
 

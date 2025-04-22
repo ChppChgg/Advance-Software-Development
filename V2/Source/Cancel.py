@@ -90,6 +90,7 @@ class CancellationPage(BasePage):
             command=self.refresh_placeholder
         )
         refresh_button.pack(side="left", padx=10)
+
     
     def load_user_bookings(self):
         try:
@@ -132,11 +133,42 @@ class CancellationPage(BasePage):
             messagebox.showerror("Error", f"Failed to load bookings:\n{e}")
 
 
-
-
     def cancel_placeholder(self):
-        """Placeholder for cancellation functionality"""
-        messagebox.showinfo("Cancel", "Cancellation functionality will be implemented later")
-    
+        selected_item = self.bookings_tree.focus()
+        if not selected_item:
+            messagebox.showwarning("No selection", "Please select a booking to cancel.")
+            return
+
+        booking_ref = self.bookings_tree.item(selected_item, "values")[0]
+
+        try:
+            db = Database("horizon_cinemas.db")
+
+            # Fetch the cancellation fee
+            cancellation_fee = db.get_cancellation_fee(booking_ref)
+            if cancellation_fee is None:
+                messagebox.showerror("Error", "Could not find cancellation fee for this booking.")
+                return
+
+            # Ask for confirmation and display fee
+            confirm = messagebox.askyesno(
+                "Confirm Cancellation",
+                f"Are you sure you want to cancel booking {booking_ref}?\n"
+                f"A cancellation fee of £{cancellation_fee:.2f} will be applied."
+            )
+            if not confirm:
+                return
+
+            # Proceed with cancellation
+            success = db.cancel_booking_by_reference(booking_ref)
+            if success:
+                messagebox.showinfo("Cancelled", "Booking cancelled successfully.")
+                self.load_user_bookings()
+            else:
+                messagebox.showerror("Error", "Failed to cancel booking.")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Cancellation failed:\n{e}")
+
     def refresh_placeholder(self):
        self.load_user_bookings()

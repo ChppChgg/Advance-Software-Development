@@ -229,12 +229,12 @@ class BookingPage(BasePage):
                 messagebox.showerror("Booking Error", f"Only {remaining} {seat_type} seats available.")
                 return
 
-            # Total price
+            # Total price and cancel fee
             total_price = float(self.price_var.get().replace("£", ""))
             cancellationfee = (total_price/2)
 
             # Generate unique booking reference
-            booking_ref = str(uuid.uuid4())[:8].upper()  # Simple unique code, e.g., 'A3F9D2B1'
+            booking_ref = str(uuid.uuid4())[:8].upper() 
 
             bookingdate = self.date_entry.get_date().strftime("%Y-%m-%d")
 
@@ -242,7 +242,7 @@ class BookingPage(BasePage):
 
             customer_id = db.add_customer(full_name, email)
 
-            # Insert booking
+            # Insert booking into bookings table
             booking_id = db.insert_booking(
                 customer_id = customer_id,
                 cinema_id=cinema_id,
@@ -253,7 +253,7 @@ class BookingPage(BasePage):
                 bookingdate=bookingdate,
                 status=status
             )
-
+            # insert booking seats
             for _ in range(quantity):
                 db.insert_booking_seat(booking_id, seat_type)
 

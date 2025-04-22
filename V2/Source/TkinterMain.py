@@ -86,9 +86,13 @@ class HorizonCinemas(tk.Tk):
 def run_application():
     """Function to run the Horizon Cinemas application"""
     db = Database()
+    #load films
     db.insert_initial_films()
+    #load cinemas
     db.generate_cinemas()
+    #load screens
     db.populate_screens()
+    #load screenings
     db.initial_screenings()
     app = HorizonCinemas()
     app.mainloop()
