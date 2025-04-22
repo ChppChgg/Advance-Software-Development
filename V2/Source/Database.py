@@ -603,8 +603,44 @@ class Database:
         self.close()
         return dict(result) if result else None
 
-
+    def get_email_by_username(self,username):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT email FROM users WHERE username = ?", (username,))
+        result = cursor.fetchone()
+        self.close()
+        return result[0] if result else None
     
+    def get_customer_id_by_email(self, email):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT CustomerID FROM Customers WHERE Email = ?", (email,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+    def get_bookings_by_customer_id(self, customer_id):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            SELECT 
+                b.BookingReference,
+                f.Title,
+                b.BookingDate,
+                s.StartTime,
+                COUNT(bs.BookingSeatID) as SeatCount,
+                b.Status
+            FROM Bookings b
+            JOIN Screenings s ON b.ScreeningID = s.ScreeningID
+            JOIN Films f ON s.FilmID = f.FilmID
+            LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
+            WHERE b.CustomerID = ?
+            GROUP BY b.BookingID
+            ORDER BY b.BookingDate DESC
+        """, (customer_id,))
+        columns = [col[0] for col in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        
 
 
 

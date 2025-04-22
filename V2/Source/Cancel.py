@@ -4,6 +4,9 @@ Cancellation page functions
 import tkinter as tk
 from tkinter import ttk, messagebox
 from Basepage import BasePage
+import sqlite3
+from Database import Database
+
 
 class CancellationPage(BasePage):
     """Page for viewing and cancelling bookings"""
@@ -87,11 +90,53 @@ class CancellationPage(BasePage):
             command=self.refresh_placeholder
         )
         refresh_button.pack(side="left", padx=10)
-        
+    
+    def load_user_bookings(self):
+        try:
+            db = Database("horizon_cinemas.db")
+
+            username_display = self.username_label.cget("text")
+            username = username_display.replace("Welcome, ", "").strip()
+
+            email = db.get_email_by_username(username)
+            if not email:
+                messagebox.showerror("Error", "No email found for this user.")
+                return
+
+            # Get customer ID from email
+            customer_id = db.get_customer_id_by_email(email)
+            if not customer_id:
+                messagebox.showerror("Error", "No customer record found for this email.")
+                return
+
+            # Get all bookings for this customer
+            bookings = db.get_bookings_by_customer_id(customer_id)
+
+            # Clear old bookings in Treeview
+            self.bookings_tree.delete(*self.bookings_tree.get_children())
+
+            if not bookings:
+                self.bookings_tree.insert("", "end", values=("No bookings found", "", "", "", "", ""))
+            else:
+                for b in bookings:
+                    self.bookings_tree.insert("", "end", values=(
+                        b["BookingReference"],
+                        b["Title"],
+                        b["BookingDate"],
+                        b["StartTime"],
+                        b["SeatCount"],
+                        b["Status"]
+                    ))
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load bookings:\n{e}")
+
+
+
+
     def cancel_placeholder(self):
         """Placeholder for cancellation functionality"""
         messagebox.showinfo("Cancel", "Cancellation functionality will be implemented later")
     
     def refresh_placeholder(self):
-        """Placeholder for refresh functionality"""
-        messagebox.showinfo("Refresh", "Refresh functionality will be implemented later")
+       self.load_user_bookings()

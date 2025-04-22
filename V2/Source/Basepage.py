@@ -143,6 +143,9 @@ class BasePage(tk.Frame):
     def update_user_info(self, username=None):
         """Update the username display in the header"""
         if username:
+            self.current_username = username
             self.username_label.config(text=f"Welcome, {username}")
         else:
+            self.current_username = None
             self.username_label.config(text="Guest")
+            

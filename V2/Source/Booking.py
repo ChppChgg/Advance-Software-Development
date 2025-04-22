@@ -88,17 +88,11 @@ class BookingPage(BasePage):
         self.name_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
         self.name_entry.grid(row=7, column=1, pady=10, padx=10, sticky="w")
 
-        # Email
-        tk.Label(form_frame, text="Email:", font=("Arial", 12), bg="white") \
-            .grid(row=8, column=0, sticky="w", pady=10)
-        self.email_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
-        self.email_entry.grid(row=8, column=1, pady=10, padx=10, sticky="w")
-
         # Proceed
         tk.Button(form_frame, text="Proceed to Seat Selection",
                   font=("Arial",12,"bold"), bg="#1E3F66", fg="white",
                   padx=20, pady=8, command=self.booking_placeholder) \
-            .grid(row=10, column=0, columnspan=2, pady=30)
+            .grid(row=8, column=0, columnspan=2, pady=30)
 
         # Load data
         self.load_cinema_rows()
@@ -180,8 +174,8 @@ class BookingPage(BasePage):
             quantity = int(self.ticket_spinbox.get())
 
             full_name = self.name_entry.get().strip()
-            email = self.email_entry.get().strip()
-
+            username = self.current_username
+            email = db.get_email_by_username(username)
 
             # Get selected cinema and film
             cinema_idx = self.cinema_combo.current()
