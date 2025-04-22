@@ -146,7 +146,7 @@ class SignupPage(BasePage):
             
             messagebox.showinfo("Registration Successful", "Your account has been created successfully. You can now login.")
             
-            self.db.add_customer(full_name, email, "")
+            self.db.add_customer(full_name, email)
             self.controller.show_frame("LoginPage")
         else:
             self.error_label.config(text=message)

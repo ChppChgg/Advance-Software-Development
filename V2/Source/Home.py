@@ -6,6 +6,9 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from Basepage import BasePage
 
+#Harry Elson , 23021935
+#Matt Nogodula, 
+#Jerry Lin, 
 class HomePage(BasePage):
     """Home page showing current and upcoming movies"""
     def __init__(self, parent, controller):

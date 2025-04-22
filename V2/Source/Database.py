@@ -661,6 +661,22 @@ class Database:
         row = cursor.fetchone()
         self.close()
         return row[0] if row else None
+    
+    def get_booking_info_by_reference(self, booking_ref):
+        self.connect()
+        cursor = self.connection.cursor()
+        self.connection.row_factory = sqlite3.Row 
+
+
+        cursor.execute("""
+            SELECT BookingDate, CancellationFee, Status
+            FROM Bookings
+            WHERE BookingReference = ?
+        """, (booking_ref,))
+        result = cursor.fetchone()
+
+        self.close()
+        return dict(result) if result else None
 
         
 

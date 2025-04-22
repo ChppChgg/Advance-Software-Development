@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox
 from Basepage import BasePage
 import sqlite3
 from Database import Database
+from datetime import datetime
 
 
 class CancellationPage(BasePage):
@@ -133,6 +134,8 @@ class CancellationPage(BasePage):
             messagebox.showerror("Error", f"Failed to load bookings:\n{e}")
 
 
+    from datetime import datetime
+
     def cancel_placeholder(self):
         selected_item = self.bookings_tree.focus()
         if not selected_item:
@@ -144,10 +147,30 @@ class CancellationPage(BasePage):
         try:
             db = Database("horizon_cinemas.db")
 
-            # Fetch the cancellation fee
-            cancellation_fee = db.get_cancellation_fee(booking_ref)
-            if cancellation_fee is None:
-                messagebox.showerror("Error", "Could not find cancellation fee for this booking.")
+            # Fetch booking date and cancellation fee
+            booking_info = db.get_booking_info_by_reference(booking_ref)
+            if not booking_info:
+                messagebox.showerror("Error", "Could not find booking details.")
+                return
+
+            booking_date_str = booking_info.get("BookingDate")
+            cancellation_fee = booking_info.get("CancellationFee")
+            status = booking_info.get("Status")
+
+            if not booking_date_str or cancellation_fee is None:
+                messagebox.showerror("Error", "Missing booking date or cancellation fee.")
+                return
+
+            # Prevent cancellation if it's for today's date
+            booking_date = datetime.strptime(booking_date_str, "%Y-%m-%d").date()
+            today = datetime.today().date()
+
+            if status == "cancelled":
+                messagebox.showinfo("Already Cancelled", "This booking has already been cancelled.")
+                return
+
+            if booking_date == today:
+                messagebox.showwarning("Too Late", "You cannot cancel a booking on the day of the screening.")
                 return
 
             # Ask for confirmation and display fee
