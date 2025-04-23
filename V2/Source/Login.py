@@ -117,11 +117,8 @@ class LoginPage(BasePage):
             self.username_entry.delete(0, 'end')
             self.password_entry.delete(0, 'end')
             
-            # Check if admin or manager
-            is_admin = user['RoleName'] in ['Admin', 'Manager']
-            
-            # Login the user through the controller
-            self.controller.login(user['Username'], is_admin)
+            # Login the user through the controller with specific role
+            self.controller.login(user['Username'], user['RoleName'])
             
             messagebox.showinfo("Login Successful", f"Welcome back, {user['Username']}!")
         else:

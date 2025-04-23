@@ -31,7 +31,8 @@ class HorizonCinemas(tk.Tk):
         
         # Application state
         self.user = None
-        self.is_admin = False
+        self.user_role = None  # Store the actual role instead of just is_admin flag
+        self.is_admin = False  # Keep for backward compatibility
         
         # Configure app-wide styles
         style = ttk.Style()
@@ -75,10 +76,11 @@ class HorizonCinemas(tk.Tk):
             )
             frame_instance.update_user_info(self.user)
     
-    def login(self, username, is_admin=False):
+    def login(self, username, role):
         """Handle user login"""
         self.user = username
-        self.is_admin = is_admin
+        self.user_role = role  # Store the specific role
+        self.is_admin = (role == 'Admin')  # Only true for admin, not manager
         self.show_frame("HomePage")
     
     def logout(self):

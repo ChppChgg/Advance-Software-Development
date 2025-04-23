@@ -113,8 +113,17 @@ class BasePage(tk.Frame):
             self.add_nav_button("Book Tickets", lambda: self.controller.show_frame("BookingPage"), parent=self.sidebar_nav_frame)
             self.add_nav_button("My Bookings", lambda: self.controller.show_frame("CancellationPage"), parent=self.sidebar_nav_frame)
             
-            # Admin-specific navigation
-            if is_admin:
+            # Role-specific navigation
+            if hasattr(self.controller, 'user_role'):
+                # Admin-only view
+                if self.controller.user_role == 'Admin':
+                    self.add_nav_button("Admin Panel", lambda: self.controller.show_frame("AdminPage"), parent=self.sidebar_nav_frame)
+                
+                # Both Admin and Manager can access Manager View
+                if self.controller.user_role in ['Admin', 'Manager']:
+                    self.add_nav_button("Manager View", lambda: self.controller.show_frame("ManagerPage"), parent=self.sidebar_nav_frame)
+            # Fall back to old behavior if user_role not available
+            elif is_admin:
                 self.add_nav_button("Admin Panel", lambda: self.controller.show_frame("AdminPage"), parent=self.sidebar_nav_frame)
                 self.add_nav_button("Manager View", lambda: self.controller.show_frame("ManagerPage"), parent=self.sidebar_nav_frame)
             
@@ -152,4 +161,3 @@ class BasePage(tk.Frame):
         else:
             self.current_username = None
             self.username_label.config(text="Guest")
-            
