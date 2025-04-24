@@ -106,6 +106,8 @@ class BasePage(tk.Frame):
         # Basic navigation for all users
         self.add_nav_button("Home", lambda: self.controller.show_frame("HomePage"), parent=self.sidebar_nav_frame)
         
+        self.add_nav_button("Movie List", lambda: self.controller.show_frame("MovieListPage"), parent=self.sidebar_nav_frame)
+
         if not is_logged_in:
             self.add_nav_button("Login", lambda: self.controller.show_frame("LoginPage"), parent=self.sidebar_nav_frame)
             self.add_nav_button("Sign Up", lambda: self.controller.show_frame("SignupPage"), parent=self.sidebar_nav_frame)

@@ -14,6 +14,8 @@ from Admin import AdminPage
 from Manager import ManagerPage
 from Utility import COLORS  # Import colors from utility
 from Database import Database
+from Movielist import MovieListPage
+
 
 #Harry Elson, 23021935
 #Matt Nogodula, 23015215
@@ -52,7 +54,8 @@ class HorizonCinemas(tk.Tk):
         # Create all page instances
         for F in (HomePage, LoginPage, SignupPage, 
                   BookingPage, CancellationPage, 
-                  AdminPage, ManagerPage):
+                  AdminPage, ManagerPage,
+                  MovieListPage):
             page_name = F.__name__
             frame = F(parent=container, controller=self)
             self.frames[page_name] = frame

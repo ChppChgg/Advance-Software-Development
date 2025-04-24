@@ -40,11 +40,11 @@ class HomePage(BasePage):
 
         # Load and display images
         image_files = [
-            ("V2/Source/images/minecraft.jfif", "A Minecraft Movie"),
-            ("V2/Source/images/amatuar.jpg", "The Amateur"),
-            ("V2/Source/images/unicorn.jfif", "Death of a Unicorn"),
+            ("V2/Source/images/aminecraftmovie.jfif", "A Minecraft Movie"),
+            ("V2/Source/images/theamateur.jfif", "The Amateur"),
+            ("V2/Source/images/deathofaunicorn.jfif", "Death of a Unicorn"),
             ("V2/Source/images/drop.jfif", "Drop"),
-            ("V2/Source/images/starwars.jfif", "Starwars Episode III")
+            ("V2/Source/images/starwarsepisodeiiirevengeofthesith20thanniversary.jfif", "Starwars Episode III")
         ]
 
         self.images = []  # Keep references to PhotoImage objects
