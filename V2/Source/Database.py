@@ -99,9 +99,9 @@ class Database:
                 FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE         
             );
 
-            -- Customers who book tickets (could also reference Users)
-            CREATE TABLE IF NOT EXISTS Customers (
-                CustomerID INTEGER PRIMARY KEY AUTOINCREMENT,
+            --  Staff who book tickets (could also reference Users)
+            CREATE TABLE IF NOT EXISTS Staff (
+                StaffID INTEGER PRIMARY KEY AUTOINCREMENT,
                 FullName Text NOT NULL,
                 Email TEXT UNIQUE NOT NULL
             );
@@ -109,7 +109,7 @@ class Database:
             -- Ticket bookings
             CREATE TABLE IF NOT EXISTS Bookings (
                 BookingID INTEGER PRIMARY KEY AUTOINCREMENT,
-                CustomerID INTEGER NOT NULL,
+                StaffID INTEGER NOT NULL,
                 CinemaID INTEGER NOT NULL,
                 ScreeningID INTEGER NOT NULL,
                 BookingReference TEXT NOT NULL UNIQUE,
@@ -117,7 +117,7 @@ class Database:
                 BookingDate DATE NOT NULL,
                 Status TEXT DEFAULT 'active' CHECK(Status IN ('active', 'cancelled')),
                 CancellationFee REAL DEFAULT 0,
-                FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID) ON DELETE CASCADE,
+                FOREIGN KEY (StaffID) REFERENCES Staff(StaffID) ON DELETE CASCADE,
                 FOREIGN KEY (CinemaID) REFERENCES Cinemas(CinemaID) ON DELETE CASCADE,
                 FOREIGN KEY (ScreeningID) REFERENCES Screenings(ScreeningID) ON DELETE CASCADE
             );
@@ -135,7 +135,7 @@ class Database:
         # Insert default roles if they don't exist
         cursor.execute("INSERT OR IGNORE INTO Roles (RoleName) VALUES ('Admin')")
         cursor.execute("INSERT OR IGNORE INTO Roles (RoleName) VALUES ('Manager')")
-        cursor.execute("INSERT OR IGNORE INTO Roles (RoleName) VALUES ('Customer')")
+        cursor.execute("INSERT OR IGNORE INTO Roles (RoleName) VALUES ('Staff')")
         
         # Create hardcoded admin user
         admin_password = "password1"  # As requested
@@ -182,7 +182,7 @@ class Database:
         self.close()
         return user if user else None
         
-    def create_user(self, username, password, email, role="Customer"):
+    def create_user(self, username, password, email, role="Staff"):
         """Create a new user"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -225,34 +225,34 @@ class Database:
             self.close()
             return False, f"Error: {e}"
     
-    def add_customer(self, full_name, email):
-        """Add a new customer to the database"""
+    def add_staff(self, full_name, email):
+        """Add a new staff to the database"""
         conn = self.connect()
         cursor = conn.cursor()
         
         try:
-            # Check if customer already exists with this email
-            existing = cursor.execute("SELECT CustomerID FROM Customers WHERE Email = ?", (email,)).fetchone()
+            # Check if staff member already exists with this email
+            existing = cursor.execute("SELECT StaffID FROM Staff WHERE Email = ?", (email,)).fetchone()
             
             if existing:
-                # Customer already exists, just return the ID
-                customer_id = existing[0]
+                # staff already exists, just return the ID
+                staff_id = existing[0]
             else:
-                # Insert new customer
+                # Insert new staff
                 cursor.execute(
-                    "INSERT INTO Customers (FullName, Email) VALUES (?, ?)",
+                    "INSERT INTO Staff (FullName, Email) VALUES (?, ?)",
                     (full_name, email)
                 )
                 conn.commit()
-                customer_id = cursor.lastrowid
+                staff_id = cursor.lastrowid
                 
             self.close()
-            return customer_id
+            return staff_id
         
         except Exception as e:
             conn.rollback()
             self.close()
-            print(f"Error adding customer: {e}")
+            print(f"Error adding staff: {e}")
             return None
 
     def add_film(self, title, description, actors, genre, rating, duration):
@@ -547,13 +547,13 @@ class Database:
         finally:
             self.close()
 
-    def insert_booking(self, customer_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, bookingdate, status):
+    def insert_booking(self, staff_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, bookingdate, status):
         try:
             self.connect()
             cursor = self.connection.cursor()
             cursor.execute("""
                 INSERT INTO Bookings (
-                    CustomerID,
+                    StaffID,
                     CinemaID,
                     ScreeningID,
                     BookingReference,
@@ -562,7 +562,7 @@ class Database:
                     Status,
                     CancellationFee
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (customer_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, status, cancellationfee))
+            """, (staff_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, status, cancellationfee))
             booking_id = cursor.lastrowid
             self.connection.commit()
         except Exception as e:
@@ -615,14 +615,14 @@ class Database:
         self.close()
         return result[0] if result else None
     
-    def get_customer_id_by_email(self, email):
+    def get_staff_id_by_email(self, email):
         self.connect()
         cursor = self.connection.cursor()
-        cursor.execute("SELECT CustomerID FROM Customers WHERE Email = ?", (email,))
+        cursor.execute("SELECT StaffID FROM Staff WHERE Email = ?", (email,))
         row = cursor.fetchone()
         return row[0] if row else None
 
-    def get_bookings_by_customer_id(self, customer_id):
+    def get_bookings_by_staff_id(self, staff_id):
         self.connect()
         cursor = self.connection.cursor()
         cursor.execute("""
@@ -637,10 +637,10 @@ class Database:
             JOIN Screenings s ON b.ScreeningID = s.ScreeningID
             JOIN Films f ON s.FilmID = f.FilmID
             LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
-            WHERE b.CustomerID = ?
+            WHERE b.StaffID = ?
             GROUP BY b.BookingID
             ORDER BY b.BookingDate DESC
-        """, (customer_id,))
+        """, (staff_id,))
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
 

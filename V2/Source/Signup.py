@@ -26,7 +26,7 @@ class SignupPage(BasePage):
         # Title
         title_label = tk.Label(
             signup_box,
-            text="Create an Account",
+            text="Create a Staff Account",
             font=FONTS["TITLE"],
             bg=COLORS["MAIN_BG"]
         )
@@ -139,7 +139,7 @@ class SignupPage(BasePage):
             self.error_label.config(text="Passwords do not match")
             return
 
-        success, message = self.db.create_user(username, password, email, "Customer")
+        success, message = self.db.create_user(username, password, email, "Staff")
 
         if success:
             self.name_entry.delete(0, 'end')
@@ -150,7 +150,7 @@ class SignupPage(BasePage):
             
             messagebox.showinfo("Registration Successful", "Your account has been created successfully. You can now login.")
             
-            self.db.add_customer(full_name, email)
+            self.db.add_staff(full_name, email)
             self.controller.show_frame("LoginPage")
         else:
             self.error_label.config(text=message)

@@ -86,7 +86,7 @@ class BookingPage(BasePage):
                                     font=("Arial", 12, "bold"), bg="white")
         self.price_label.grid(row=6, column=1, sticky="w", pady=10)
 
-        # Customer name
+        # Staff name
         tk.Label(form_frame, text="Full Name:", font=("Arial", 12), bg="white") \
             .grid(row=7, column=0, sticky="w", pady=10)
         self.name_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
@@ -244,11 +244,11 @@ class BookingPage(BasePage):
 
             status = 'active'
 
-            customer_id = db.add_customer(full_name, email)
+            staff_id = db.add_staff(full_name, email)
 
             # Insert booking into bookings table
             booking_id = db.insert_booking(
-                customer_id = customer_id,
+                staff_id = staff_id,
                 cinema_id=cinema_id,
                 screening_id=screening_id,
                 booking_ref=booking_ref,

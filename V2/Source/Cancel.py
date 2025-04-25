@@ -108,14 +108,14 @@ class CancellationPage(BasePage):
                 messagebox.showerror("Error", "No email found for this user.")
                 return
 
-            # Get customer ID from email
-            customer_id = db.get_customer_id_by_email(email)
-            if not customer_id:
-                messagebox.showerror("Error", "No customer record found for this email.")
+            # Get staff ID from email
+            staff_id = db.get_staff_id_by_email(email)
+            if not staff_id:
+                messagebox.showerror("Error", "No staff record found for this email.")
                 return
 
-            # Get all bookings for this customer
-            bookings = db.get_bookings_by_customer_id(customer_id)
+            # Get all bookings for this staff member
+            bookings = db.get_bookings_by_staff_id(staff_id)
 
             # Clear old bookings in Treeview
             self.bookings_tree.delete(*self.bookings_tree.get_children())
