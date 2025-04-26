@@ -10,8 +10,8 @@ from Login import LoginPage
 from Signup import SignupPage
 from Booking import BookingPage
 from Cancel import CancellationPage
-from Admin import AdminPage
 from Manager import ManagerPage
+from Admin import AdminPage
 from Utility import COLORS  # Import colors from utility
 from Database import Database
 from Movielist import MovieListPage
@@ -33,8 +33,8 @@ class HorizonCinemas(tk.Tk):
         
         # Application state
         self.user = None
-        self.user_role = None  # Store the actual role instead of just is_admin flag
-        self.is_admin = False  # Keep for backward compatibility
+        self.user_role = None  
+        self.is_manager = False  # Keep for backward compatibility
         
         # Configure app-wide styles
         style = ttk.Style()
@@ -75,7 +75,7 @@ class HorizonCinemas(tk.Tk):
         for frame_name, frame_instance in self.frames.items():
             frame_instance.update_sidebar(
                 is_logged_in=self.user is not None,
-                is_admin=self.is_admin
+                is_manager=self.is_manager
             )
             frame_instance.update_user_info(self.user)
     
@@ -83,13 +83,13 @@ class HorizonCinemas(tk.Tk):
         """Handle user login"""
         self.user = username
         self.user_role = role  # Store the specific role
-        self.is_admin = (role == 'Admin')  # Only true for admin, not manager
+        self.is_manager = (role.lower() == 'manager')  # Make comparison case-insensitive
         self.show_frame("HomePage")
     
     def logout(self):
         """Handle user logout"""
         self.user = None
-        self.is_admin = False
+        self.is_manager = False
         self.show_frame("HomePage")
 
 def run_application():

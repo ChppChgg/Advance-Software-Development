@@ -138,11 +138,15 @@ class Database:
         cursor.execute("INSERT OR IGNORE INTO Roles (RoleName) VALUES ('Staff')")
         
         # Create hardcoded admin user
-        admin_password = "password1"  # As requested
+        admin_password = "password1" 
         admin_password_hash = hashlib.sha256(admin_password.encode()).hexdigest()
+
+        manager_password = "password1" 
+        manager_password_hash = hashlib.sha256(manager_password.encode()).hexdigest()
         
         # Check if admin exists
         admin_exists = cursor.execute("SELECT COUNT(*) FROM Users WHERE Username = 'admin'").fetchone()[0]
+        manager_exists = cursor.execute("SELECT COUNT(*) FROM Users WHERE Username = 'manager'").fetchone()[0]
         
         if admin_exists:
             # Update the admin password to ensure it matches our hardcoded value
@@ -151,10 +155,34 @@ class Database:
                 (admin_password_hash,)
             )
         else:
-            # Create the admin user with our hardcoded credentials
+            # Get the Admin role ID
+            cursor.execute("SELECT RoleID FROM Roles WHERE RoleName = 'Admin'")
+            admin_role_id = cursor.fetchone()[0]
+            
+            # Create the admin user with the Admin role
             cursor.execute(
                 "INSERT INTO Users (Username, PasswordHash, Email, RoleID) VALUES (?, ?, ?, ?)",
-                ("admin", admin_password_hash, "admin@horizon.com", 1)
+                ("admin", admin_password_hash, "admin@horizon.com", admin_role_id)
+            )
+        
+        if manager_exists:
+            # Update the manager password AND role to ensure they're correct
+            cursor.execute("SELECT RoleID FROM Roles WHERE RoleName = 'Manager'")
+            manager_role_id = cursor.fetchone()[0]
+            
+            cursor.execute(
+                "UPDATE Users SET PasswordHash = ?, RoleID = ? WHERE Username = 'manager'",
+                (manager_password_hash, manager_role_id)
+            )
+        else:
+            # Get the Manager role ID
+            cursor.execute("SELECT RoleID FROM Roles WHERE RoleName = 'Manager'")
+            manager_role_id = cursor.fetchone()[0]
+            
+            # Create the manager user with the Manager role
+            cursor.execute(
+                "INSERT INTO Users (Username, PasswordHash, Email, RoleID) VALUES (?, ?, ?, ?)",
+                ("manager", manager_password_hash, "manager@horizon.com", manager_role_id)
             )
         
         conn.commit()
@@ -682,7 +710,7 @@ class Database:
         self.close()
         return dict(result) if result else None
 
-        
+
 
 
 

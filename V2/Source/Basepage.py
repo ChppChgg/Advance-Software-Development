@@ -4,7 +4,6 @@ Base page, carries sidebar, header, footer, etc.
 import tkinter as tk
 from tkinter import ttk
 from Utility import COLORS, FONTS 
-
 #Harry Elson, 23021935
 #Matt Nogodula, 23015215
 #Jerry Lin, 23024553
@@ -93,8 +92,9 @@ class BasePage(tk.Frame):
         )
         self.footer_label.pack(pady=5)
         
-    def update_sidebar(self, is_logged_in=False, is_admin=False):
+    def update_sidebar(self, is_logged_in=False, is_manager=False):
         """Update sidebar based on login status and user role"""
+        print(f"User role: '{self.controller.user_role}'")  
         # Clear existing buttons
         for widget in self.sidebar_nav_frame.winfo_children():
             widget.destroy()
@@ -105,7 +105,6 @@ class BasePage(tk.Frame):
         
         # Basic navigation for all users
         self.add_nav_button("Home", lambda: self.controller.show_frame("HomePage"), parent=self.sidebar_nav_frame)
-        
         self.add_nav_button("Movie List", lambda: self.controller.show_frame("MovieListPage"), parent=self.sidebar_nav_frame)
 
         if not is_logged_in:
@@ -115,17 +114,11 @@ class BasePage(tk.Frame):
             self.add_nav_button("Book Tickets", lambda: self.controller.show_frame("BookingPage"), parent=self.sidebar_nav_frame)
             self.add_nav_button("My Bookings", lambda: self.controller.show_frame("CancellationPage"), parent=self.sidebar_nav_frame)
             
-            # Role-specific navigation
-            if hasattr(self.controller, 'user_role'):
-                # Admin-only view
-                if self.controller.user_role == 'Admin':
-                    self.add_nav_button("Admin Panel", lambda: self.controller.show_frame("AdminPage"), parent=self.sidebar_nav_frame)
-                
-                # Both Admin and Manager can access Manager View
-                if self.controller.user_role in ['Admin', 'Manager']:
-                    self.add_nav_button("Manager View", lambda: self.controller.show_frame("ManagerPage"), parent=self.sidebar_nav_frame)
-            # Fall back to old behavior if user_role not available
-            elif is_admin:
+            # Role-specific navigation - use case-insensitive comparison
+            if self.controller.user_role.lower() == 'admin':
+                self.add_nav_button("Admin Panel", lambda: self.controller.show_frame("AdminPage"), parent=self.sidebar_nav_frame)
+            
+            elif self.controller.user_role.lower() == 'manager':
                 self.add_nav_button("Admin Panel", lambda: self.controller.show_frame("AdminPage"), parent=self.sidebar_nav_frame)
                 self.add_nav_button("Manager View", lambda: self.controller.show_frame("ManagerPage"), parent=self.sidebar_nav_frame)
             
