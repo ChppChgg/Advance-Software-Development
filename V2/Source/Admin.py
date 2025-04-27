@@ -486,3 +486,119 @@ class AdminPage(BasePage):
             self.report_tree.insert("", "end", values=("Error loading data", "", "", ""))
         finally:
             self.db.close()
+
+    def show_popular_films_report(self):
+        """Display report of most popular films based on booking data"""
+        self.current_report = "films"
+        # Clear existing data
+        for item in self.report_tree.get_children():
+            self.report_tree.delete(item)
+        
+        # Update column headers
+        self.report_tree.heading("item", text="Film Title")
+        self.report_tree.heading("value1", text="Bookings")
+        self.report_tree.heading("value2", text="Revenue (£)")
+        self.report_tree.heading("value3", text="Avg. Seats/Booking")
+        
+        try:
+            # Connect to database
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            
+            # Query to get popular films data
+            cursor.execute("""
+                SELECT 
+                    f.Title as FilmTitle,
+                    COUNT(DISTINCT b.BookingID) as BookingCount,
+                    SUM(b.TotalPrice) as Revenue,
+                    ROUND(COUNT(bs.BookingSeatID) * 1.0 / COUNT(DISTINCT b.BookingID), 1) as AvgSeatsPerBooking
+                FROM Films f
+                JOIN Screenings s ON f.FilmID = s.FilmID
+                JOIN Bookings b ON s.ScreeningID = b.ScreeningID
+                LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
+                WHERE b.Status = 'active'
+                GROUP BY f.FilmID
+                ORDER BY BookingCount DESC
+            """)
+            
+            results = cursor.fetchall()
+            
+            # Insert data into treeview
+            for row in results:
+                self.report_tree.insert("", "end", values=(
+                    row["FilmTitle"],
+                    row["BookingCount"],
+                    f"{row['Revenue']:.2f}" if row['Revenue'] else "0.00",
+                    row["AvgSeatsPerBooking"]
+                ))
+                
+            if not results:
+                self.report_tree.insert("", "end", values=("No film booking data found", "", "", ""))
+                
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to load popular films report: {e}")
+            self.report_tree.insert("", "end", values=("Error loading data", "", "", ""))
+        finally:
+            self.db.close()
+
+    def show_cinema_report(self):
+        """Display performance report for each cinema"""
+        self.current_report = "cinema"
+        # Clear existing data
+        for item in self.report_tree.get_children():
+            self.report_tree.delete(item)
+        
+        # Update column headers
+        self.report_tree.heading("item", text="Cinema")
+        self.report_tree.heading("value1", text="Occupancy Rate")
+        self.report_tree.heading("value2", text="Avg. Revenue/Screening")
+        self.report_tree.heading("value3", text="Popular Time Slot")
+        
+        try:
+            # Connect to database
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            
+            # Query to get cinema performance data
+            cursor.execute("""
+                SELECT 
+                    c.CinemaName as CinemaName,
+                    ROUND((COUNT(bs.BookingSeatID) * 100.0) / 
+                        (SELECT SUM(scr.SeatCapacity) FROM Screenings s2 
+                         JOIN Screens scr ON s2.ScreenID = scr.ScreenID
+                         WHERE s2.ScreeningID IN (SELECT ScreeningID FROM Bookings WHERE CinemaID = c.CinemaID)), 1) 
+                        as OccupancyRate,
+                    ROUND(SUM(b.TotalPrice) / COUNT(DISTINCT s.ScreeningID), 2) as AvgRevenuePerScreening,
+                    CASE 
+                        WHEN CAST(substr(s.StartTime, 1, 2) as INTEGER) < 12 THEN 'Morning'
+                        WHEN CAST(substr(s.StartTime, 1, 2) as INTEGER) < 17 THEN 'Afternoon'
+                        ELSE 'Evening'
+                    END as PopularTimeSlot
+                FROM Cinemas c
+                JOIN Bookings b ON c.CinemaID = b.CinemaID
+                JOIN Screenings s ON b.ScreeningID = s.ScreeningID
+                LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
+                WHERE b.Status = 'active'
+                GROUP BY c.CinemaID
+                ORDER BY OccupancyRate DESC
+            """)
+            
+            results = cursor.fetchall()
+            
+            # Insert data into treeview
+            for row in results:
+                self.report_tree.insert("", "end", values=(
+                    row["CinemaName"],
+                    f"{row['OccupancyRate']}%" if row['OccupancyRate'] else "N/A",
+                    f"£{row['AvgRevenuePerScreening']:.2f}" if row['AvgRevenuePerScreening'] else "£0.00",
+                    row["PopularTimeSlot"]
+                ))
+                
+            if not results:
+                self.report_tree.insert("", "end", values=("No cinema performance data found", "", "", ""))
+                
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to load cinema report: {e}")
+            self.report_tree.insert("", "end", values=("Error loading data", "", "", ""))
+        finally:
+            self.db.close()
