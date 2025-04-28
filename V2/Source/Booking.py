@@ -203,6 +203,30 @@ class BookingPage(BasePage):
         total = ((price + extraprice) * qty)
         self.price_var.set(f"£{total:.2f}")
         
+    def validate_user_cinema(self, selected_cinema_id):
+            """Check if the logged-in user's cinema matches the selected cinema, 
+            or if the user is an admin/manager (who can book any cinema)."""
+            db = Database("horizon_cinemas.db")
+            username = self.current_username
+            # Get the user's assigned cinema and role
+            user_cinema_id = db.get_cinema_id_by_username(username)
+            user_role = db.get_user_role_by_username(username)
+            print(user_role)
+            if user_cinema_id is None:
+                messagebox.showerror("Access Denied", "Could not verify your assigned cinema.")
+                return False
+            
+            if user_role in ['Admin', 'Manager']:
+                # Admins and Managers can book any cinema
+                return True
+
+            if user_cinema_id != selected_cinema_id:
+                messagebox.showerror("Access Denied", "You can only book tickets for your assigned cinema.")
+                return False
+            
+            return True
+
+
 
     def booking_placeholder(self):
         try:
@@ -217,6 +241,9 @@ class BookingPage(BasePage):
             # Get selected cinema and film
             cinema_idx = self.cinema_combo.current()
             cinema_id = self.cinema_data[cinema_idx]['CinemaID']
+            if not self.validate_user_cinema(cinema_id):
+              return
+
 
             film_idx = self.film_combo.current()
             film_id = self.film_data[film_idx]['FilmID']

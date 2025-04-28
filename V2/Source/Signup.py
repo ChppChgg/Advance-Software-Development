@@ -61,6 +61,15 @@ class SignupPage(BasePage):
         confirm_label.grid(row=5, column=0, sticky="w", pady=10)
         self.confirm_entry = tk.Entry(signup_box, font=FONTS["NORMAL"], width=25, show="*")
         self.confirm_entry.grid(row=5, column=1, pady=10, padx=10)
+
+        # Fetch cinema list from database
+        cinema_rows = self.db.get_all_cinemas()
+        self.cinema_options = {cinema[1]: cinema[0] for cinema in cinema_rows}  # {name: id}
+        self.cinema_combobox = ttk.Combobox(signup_box, font=FONTS["NORMAL"], width=23, values=list(self.cinema_options.keys()), state="readonly")
+        self.cinema_combobox.grid(row=6, column=1, pady=10, padx=10)
+        self.cinema_combobox.set("Select a Cinema")
+
+
         
         # Sign Up Button
         signup_button = tk.Button(
@@ -73,7 +82,7 @@ class SignupPage(BasePage):
             pady=8,
             command=self.signup_user
         )
-        signup_button.grid(row=6, column=0, columnspan=2, pady=30)
+        signup_button.grid(row=7, column=0, columnspan=2, pady=30)
         
         # Login link
         login_link = tk.Label(
@@ -84,7 +93,7 @@ class SignupPage(BasePage):
             bg=COLORS["MAIN_BG"],
             cursor="hand2"
         )
-        login_link.grid(row=7, column=0, columnspan=2)
+        login_link.grid(row=8, column=0, columnspan=2)
         login_link.bind("<Button-1>", lambda e: controller.show_frame("LoginPage"))
         
         # Error message label
@@ -95,7 +104,7 @@ class SignupPage(BasePage):
             fg="red",
             bg=COLORS["MAIN_BG"]
         )
-        self.error_label.grid(row=8, column=0, columnspan=2, pady=(10, 0))
+        self.error_label.grid(row=9, column=0, columnspan=2, pady=(10, 0))
 
         # Bind Enter key to signup function
         self.name_entry.bind("<Return>", lambda event: self.signup_user())
@@ -111,9 +120,14 @@ class SignupPage(BasePage):
         username = self.username_entry.get().strip()
         password = self.password_entry.get()
         confirm_password = self.confirm_entry.get()
+        cinema_name = self.cinema_combobox.get()
+        cinema_id = int(self.cinema_options.get(cinema_name))
+
         
         self.error_label.config(text="")
-
+        if cinema_name == "Select a Cinema":
+            self.error_label.config(text="Please select a cinema")
+            return
         if not full_name:
             self.error_label.config(text="Please enter your full name")
             return
@@ -139,7 +153,7 @@ class SignupPage(BasePage):
             self.error_label.config(text="Passwords do not match")
             return
 
-        success, message = self.db.create_user(username, password, email, "Staff")
+        success, message = self.db.create_user(username, password, email, cinema_id, "Staff")
 
         if success:
             self.name_entry.delete(0, 'end')

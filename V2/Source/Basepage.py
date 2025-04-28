@@ -94,7 +94,7 @@ class BasePage(tk.Frame):
         
     def update_sidebar(self, is_logged_in=False, is_manager=False):
         """Update sidebar based on login status and user role"""
-        print(f"User role: '{self.controller.user_role}'")  
+        #print(f"User role: '{self.controller.user_role}'")  
         # Clear existing buttons
         for widget in self.sidebar_nav_frame.winfo_children():
             widget.destroy()

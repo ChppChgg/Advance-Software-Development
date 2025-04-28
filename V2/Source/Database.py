@@ -52,7 +52,9 @@ class Database:
                 PasswordHash TEXT NOT NULL,
                 Email TEXT UNIQUE NOT NULL,
                 RoleID INTEGER NOT NULL,
-                FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
+                CinemaID INTEGER NOT NULL,
+                FOREIGN KEY (RoleID) REFERENCES Roles(RoleID) ON DELETE CASCADE,
+                FOREIGN KEY (CinemaID) REFERENCES Cinemas(CinemaID) ON DELETE CASCADE
             );
 
             -- Cinemas located in different cities
@@ -161,8 +163,8 @@ class Database:
             
             # Create the admin user with the Admin role
             cursor.execute(
-                "INSERT INTO Users (Username, PasswordHash, Email, RoleID) VALUES (?, ?, ?, ?)",
-                ("admin", admin_password_hash, "admin@horizon.com", admin_role_id)
+                "INSERT INTO Users (Username, PasswordHash, Email, RoleID,  CinemaID) VALUES (?, ?, ?, ?, ?)",
+                ("admin", admin_password_hash, "admin@horizon.com", admin_role_id, 1)
             )
         
         if manager_exists:
@@ -181,8 +183,8 @@ class Database:
             
             # Create the manager user with the Manager role
             cursor.execute(
-                "INSERT INTO Users (Username, PasswordHash, Email, RoleID) VALUES (?, ?, ?, ?)",
-                ("manager", manager_password_hash, "manager@horizon.com", manager_role_id)
+                "INSERT INTO Users (Username, PasswordHash, Email, RoleID, CinemaID) VALUES (?, ?, ?, ?, ?)",
+                ("manager", manager_password_hash, "manager@horizon.com", manager_role_id, 1)
             )
         
         conn.commit()
@@ -210,7 +212,7 @@ class Database:
         self.close()
         return user if user else None
         
-    def create_user(self, username, password, email, role="Staff"):
+    def create_user(self, username, password, email, cinema_id, role='Staff'):
         """Create a new user"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -230,8 +232,8 @@ class Database:
             
             # Insert the new user
             cursor.execute(
-                "INSERT INTO Users (Username, PasswordHash, Email, RoleID) VALUES (?, ?, ?, ?)",
-                (username, password_hash, email, role_id)
+                "INSERT INTO Users (Username, PasswordHash, Email, CinemaID, RoleID) VALUES (?, ?, ?, ?, ?)",
+                (username, password_hash, email, cinema_id, role_id)
             )
             
             conn.commit()
@@ -643,6 +645,13 @@ class Database:
         self.close()
         return result[0] if result else None
     
+    def get_cinema_id_by_username(self, username):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT CinemaID FROM Users WHERE Username = ?", (username,))
+        row = cursor.fetchone()
+        return row['CinemaID'] if row else None
+
     def get_staff_id_by_email(self, email):
         self.connect()
         cursor = self.connection.cursor()
@@ -710,7 +719,41 @@ class Database:
         self.close()
         return dict(result) if result else None
 
+    def get_all_cinemas(self):
+        """Fetch all cinema records from the database."""
+        try:
+            self.connect()
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT * FROM Cinemas")  # Adjust table name if needed
+            rows = cursor.fetchall()
+            return rows
+        except Exception as e:
+            print("Error fetching cinemas:", e)
+            return []
+        finally:
+            self.close()
 
+    def get_user_role_by_username(self, username):
+        """Get the role of the user (admin, manager, or staff) by their username."""
+        self.connect()
+        cursor = self.connection.cursor()
+
+        # Query to get RoleID for the given username
+        cursor.execute("SELECT RoleID FROM Users WHERE Username = ?", (username,))
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        # Get the RoleID from the query result
+        role_id = row['RoleID']
+
+        # Query to get the role name based on RoleID
+        cursor.execute("SELECT RoleName FROM Roles WHERE RoleID = ?", (role_id,))
+        role_row = cursor.fetchone()
+
+        # Return the role name, if found, otherwise None
+        return role_row['RoleName'] if role_row else None
 
 
 
