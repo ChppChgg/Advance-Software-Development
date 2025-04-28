@@ -112,7 +112,7 @@ class BasePage(tk.Frame):
             self.add_nav_button("Sign Up", lambda: self.controller.show_frame("SignupPage"), parent=self.sidebar_nav_frame)
         else:
             self.add_nav_button("Book Tickets", lambda: self.controller.show_frame("BookingPage"), parent=self.sidebar_nav_frame)
-            self.add_nav_button("My Bookings", lambda: self.controller.show_frame("CancellationPage"), parent=self.sidebar_nav_frame)
+            self.add_nav_button("Bookings", lambda: self.controller.show_frame("CancellationPage"), parent=self.sidebar_nav_frame)
             
             # Role-specific navigation - use case-insensitive comparison
             if self.controller.user_role.lower() == 'admin':

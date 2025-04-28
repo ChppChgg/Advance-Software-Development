@@ -24,7 +24,7 @@ class CancellationPage(BasePage):
         # Page title
         page_title = tk.Label(
             content,
-            text="My Bookings",
+            text="Bookings",
             font=("Arial", 16, "bold"),
             bg="white"
         )
@@ -35,7 +35,7 @@ class CancellationPage(BasePage):
         bookings_frame.pack(fill="both", expand=True)
         
         # Treeview for bookings
-        columns = ("booking_id", "film", "date", "time", "seats", "status")
+        columns = ("booking_id", "film", "date", "time", "seats", "email", "cinema", "status")
         self.bookings_tree = ttk.Treeview(bookings_frame, columns=columns, show="headings")
         
         # Define headings
@@ -44,15 +44,19 @@ class CancellationPage(BasePage):
         self.bookings_tree.heading("date", text="Date")
         self.bookings_tree.heading("time", text="Time")
         self.bookings_tree.heading("seats", text="Seats")
+        self.bookings_tree.heading("email", text="Email")
+        self.bookings_tree.heading("cinema", text="Cinema")
         self.bookings_tree.heading("status", text="Status")
         
         # Define column widths
         self.bookings_tree.column("booking_id", width=100)
-        self.bookings_tree.column("film", width=200)
+        self.bookings_tree.column("film", width=180)
         self.bookings_tree.column("date", width=100)
-        self.bookings_tree.column("time", width=100)
-        self.bookings_tree.column("seats", width=100)
-        self.bookings_tree.column("status", width=100)
+        self.bookings_tree.column("time", width=80)
+        self.bookings_tree.column("seats", width=60)
+        self.bookings_tree.column("email", width=180)
+        self.bookings_tree.column("cinema", width=120)
+        self.bookings_tree.column("status", width=80)
         
         # Add scrollbar
         scrollbar = ttk.Scrollbar(bookings_frame, orient="vertical", command=self.bookings_tree.yview)
@@ -63,7 +67,7 @@ class CancellationPage(BasePage):
         self.bookings_tree.pack(fill="both", expand=True)
         
         # Placeholder data
-        self.bookings_tree.insert("", "end", values=("No bookings found", "", "", "", "", ""))
+        self.bookings_tree.insert("", "end", values=("No bookings found", "", "", "", "", "", "", ""))
         
         # Buttons frame
         buttons_frame = tk.Frame(content, bg="white")
@@ -99,29 +103,34 @@ class CancellationPage(BasePage):
     def load_user_bookings(self):
         try:
             db = Database("horizon_cinemas.db")
-
+            
             username_display = self.username_label.cget("text")
             username = username_display.replace("Welcome, ", "").strip()
-
-            email = db.get_email_by_username(username)
-            if not email:
-                messagebox.showerror("Error", "No email found for this user.")
+            
+            # Get user role and cinema ID
+            user_role = db.get_user_role_by_username(username)
+            cinema_id = db.get_cinema_id_by_username(username)
+            
+            if not cinema_id and user_role != "Admin" and user_role != "Manager":
+                messagebox.showerror("Error", "No cinema assigned to this user.")
                 return
-
-            # Get staff ID from email
-            staff_id = db.get_staff_id_by_email(email)
-            if not staff_id:
-                messagebox.showerror("Error", "No staff record found for this email.")
-                return
-
-            # Get all bookings for this staff member
-            bookings = db.get_bookings_by_staff_id(staff_id)
-
+            
+            # Get bookings based on role and cinema assignment
+            if user_role in ["Admin", "Manager"]:
+                # Admins and managers can see all bookings if they want
+                if messagebox.askyesno("Booking Selection", "Do you want to see bookings from all cinemas?"):
+                    bookings = db.get_bookings(cinema_id=None, include_details=True)
+                else:
+                    bookings = db.get_bookings(cinema_id=cinema_id, include_details=True)
+            else:
+                # Staff can only see bookings from their cinema
+                bookings = db.get_bookings(cinema_id=cinema_id, include_details=True)
+            
             # Clear old bookings in Treeview
             self.bookings_tree.delete(*self.bookings_tree.get_children())
-
+            
             if not bookings:
-                self.bookings_tree.insert("", "end", values=("No bookings found", "", "", "", "", ""))
+                self.bookings_tree.insert("", "end", values=("No bookings found", "", "", "", "", "", "", ""))
             else:
                 for b in bookings:
                     self.bookings_tree.insert("", "end", values=(
@@ -130,14 +139,13 @@ class CancellationPage(BasePage):
                         b["BookingDate"],
                         b["StartTime"],
                         b["SeatCount"],
+                        b["UserEmail"],
+                        b["CinemaName"],
                         b["Status"]
                     ))
-
+                    
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load bookings:\n{e}")
-
-
-    from datetime import datetime
 
     def cancel_placeholder(self):
         selected_item = self.bookings_tree.focus()
