@@ -105,6 +105,9 @@ def run_application():
     db.initial_screenings()
     app = HorizonCinemas()
     app.mainloop()
+    
 
 if __name__ == "__main__":
+    db = Database()
+    db.add_cinema_id_to_screens()
     run_application()

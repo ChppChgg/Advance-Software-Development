@@ -63,12 +63,13 @@ class ManagerPage(BasePage):
         list_frame = tk.Frame(parent)
         list_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         
-        # Screenings treeview
-        columns = ("id", "film", "screen", "start_time", "end_time", "seats")
+        # Screenings treeview - Add cinema column
+        columns = ("id", "cinema", "film", "screen", "start_time", "end_time", "seats")
         self.screenings_tree = ttk.Treeview(list_frame, columns=columns, show="headings")
         
         # Define headings
         self.screenings_tree.heading("id", text="ID")
+        self.screenings_tree.heading("cinema", text="Cinema")  # New column
         self.screenings_tree.heading("film", text="Film")
         self.screenings_tree.heading("screen", text="Screen")
         self.screenings_tree.heading("start_time", text="Start Time")
@@ -77,6 +78,7 @@ class ManagerPage(BasePage):
         
         # Define column widths
         self.screenings_tree.column("id", width=50)
+        self.screenings_tree.column("cinema", width=150)  # New column
         self.screenings_tree.column("film", width=200)
         self.screenings_tree.column("screen", width=80)
         self.screenings_tree.column("start_time", width=100)
@@ -145,21 +147,25 @@ class ManagerPage(BasePage):
             conn = self.db.connect()
             cursor = conn.cursor()
             
-            # Join query to get film name and screen info with screening details
+            # Query with cinema name from Screens-Cinemas relationship
             cursor.execute("""
-                SELECT s.ScreeningID, f.Title, scr.ScreenNumber, s.StartTime, s.EndTime, s.TotalSeats
+                SELECT s.ScreeningID, f.Title, scr.ScreenNumber, s.StartTime, 
+                       s.EndTime, s.TotalSeats, c.CinemaName
                 FROM Screenings s
                 JOIN Films f ON s.FilmID = f.FilmID
                 JOIN Screens scr ON s.ScreenID = scr.ScreenID
-                ORDER BY s.StartTime
+                LEFT JOIN Cinemas c ON scr.CinemaID = c.CinemaID
+                ORDER BY c.CinemaName, s.StartTime
             """)
             
             screenings = cursor.fetchall()
             
-            # Insert data into treeview
+            # Insert data into treeview with actual cinema name
             for screening in screenings:
+                cinema_name = screening["CinemaName"] if screening["CinemaName"] else "Not Assigned"
                 self.screenings_tree.insert("", "end", values=(
                     screening["ScreeningID"],
+                    cinema_name,
                     screening["Title"],
                     f"Screen {screening['ScreenNumber']}",
                     screening["StartTime"],
@@ -168,11 +174,11 @@ class ManagerPage(BasePage):
                 ))
                 
             if not screenings:
-                self.screenings_tree.insert("", "end", values=("No screenings found", "", "", "", "", ""))
+                self.screenings_tree.insert("", "end", values=("No screenings found", "", "", "", "", "", ""))
                 
         except Exception as e:
             messagebox.showerror("Database Error", f"Failed to load screenings: {e}")
-            self.screenings_tree.insert("", "end", values=("Error loading data", "", "", "", "", ""))
+            self.screenings_tree.insert("", "end", values=("Error loading data", "", "", "", "", "", ""))
         finally:
             self.db.close()  # Use local db
     
@@ -497,21 +503,23 @@ class ManagerPage(BasePage):
         list_frame = tk.Frame(parent)
         list_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         
-        # Users treeview
-        columns = ("id", "username", "email", "role")
+        # Add a new column for associated cinema
+        columns = ("id", "username", "email", "role", "cinema")
         self.users_tree = ttk.Treeview(list_frame, columns=columns, show="headings")
-        
+
         # Define headings
         self.users_tree.heading("id", text="ID")
         self.users_tree.heading("username", text="Username")
         self.users_tree.heading("email", text="Email")
         self.users_tree.heading("role", text="Role")
-        
+        self.users_tree.heading("cinema", text="Cinema")
+
         # Define column widths
         self.users_tree.column("id", width=50)
         self.users_tree.column("username", width=150)
         self.users_tree.column("email", width=200)
         self.users_tree.column("role", width=100)
+        self.users_tree.column("cinema", width=150)
         
         # Add scrollbar
         scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.users_tree.yview)
@@ -581,9 +589,11 @@ class ManagerPage(BasePage):
                     u.UserID, 
                     u.Username, 
                     u.Email, 
-                    r.RoleName
+                    r.RoleName,
+                    c.CinemaName
                 FROM Users u
                 JOIN Roles r ON u.RoleID = r.RoleID
+                LEFT JOIN Cinemas c ON u.CinemaID = c.CinemaID
                 ORDER BY u.UserID
             """)
             
@@ -595,15 +605,16 @@ class ManagerPage(BasePage):
                     user["UserID"],
                     user["Username"],
                     user["Email"],
-                    user["RoleName"]
+                    user["RoleName"],
+                    user["CinemaName"] if user["RoleName"].lower() == "staff" else ""
                 ))
                 
             if not users:
-                self.users_tree.insert("", "end", values=("No users found", "", "", ""))
+                self.users_tree.insert("", "end", values=("No users found", "", "", "", ""))
                 
         except Exception as e:
             messagebox.showerror("Database Error", f"Failed to load users: {e}")
-            self.users_tree.insert("", "end", values=("Error loading data", "", "", ""))
+            self.users_tree.insert("", "end", values=("Error loading data", "", "", "", ""))
         finally:
             self.db.close()  # Use local db
     
@@ -1354,11 +1365,26 @@ class ManagerPage(BasePage):
         # Create a new window
         add_window = tk.Toplevel(self)
         add_window.title("Add New Screen")
-        add_window.geometry("350x200")
+        add_window.geometry("350x250")
         add_window.resizable(False, False)
         
+        # Get cinemas for dropdown
+        conn = self.db.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT CinemaID, CinemaName FROM Cinemas ORDER BY CinemaName")
+        cinemas = cursor.fetchall()
+        cinema_options = [f"{cinema['CinemaID']} - {cinema['CinemaName']}" for cinema in cinemas]
+        self.db.close()
+        
+        # Cinema selection
+        tk.Label(add_window, text="Cinema:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        cinema_combo = ttk.Combobox(add_window, width=25, values=cinema_options, state="readonly")
+        if cinema_options:
+            cinema_combo.current(0)
+        cinema_combo.grid(row=0, column=1, padx=10, pady=5)
+        
         # Screen number
-        tk.Label(add_window, text="Screen Number:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        tk.Label(add_window, text="Screen Number:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
         number_var = tk.StringVar(value="1")
         number_spinbox = ttk.Spinbox(
             add_window, 
@@ -1367,10 +1393,10 @@ class ManagerPage(BasePage):
             textvariable=number_var, 
             width=5
         )
-        number_spinbox.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+        number_spinbox.grid(row=1, column=1, padx=10, pady=5, sticky="w")
         
         # Seat capacity
-        tk.Label(add_window, text="Seat Capacity:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        tk.Label(add_window, text="Seat Capacity:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
         capacity_var = tk.StringVar(value="100")
         capacity_spinbox = ttk.Spinbox(
             add_window, 
@@ -1379,24 +1405,26 @@ class ManagerPage(BasePage):
             textvariable=capacity_var, 
             width=5
         )
-        capacity_spinbox.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+        capacity_spinbox.grid(row=2, column=1, padx=10, pady=5, sticky="w")
         
         # Add button
         tk.Button(
             add_window, 
             text="Add Screen", 
-            command=lambda: self.add_screen(
+            command=lambda: self.add_screen_with_cinema(
+                cinema_combo.get().split(" - ")[0],
                 number_var.get(),
                 capacity_var.get(),
                 add_window
             )
-        ).grid(row=2, column=0, columnspan=2, pady=20)
+        ).grid(row=3, column=0, columnspan=2, pady=20)
 
-    def add_screen(self, screen_number, capacity, window):
-        """Add a new screen to the database"""
+    def add_screen_with_cinema(self, cinema_id, screen_number, capacity, window):
+        """Add a new screen to the database with cinema association"""
         try:
             screen_number = int(screen_number)
             capacity = int(capacity)
+            cinema_id = int(cinema_id)
             
             # Validate capacity range
             if capacity < 50 or capacity > 120:
@@ -1406,23 +1434,23 @@ class ManagerPage(BasePage):
             conn = self.db.connect()
             cursor = conn.cursor()
             
-            # Check if screen number already exists
+            # Check if screen number already exists in this cinema
             cursor.execute(
-                "SELECT COUNT(*) FROM Screens WHERE ScreenNumber = ?", 
-                (screen_number,)
+                "SELECT COUNT(*) FROM Screens WHERE ScreenNumber = ? AND CinemaID = ?", 
+                (screen_number, cinema_id)
             )
             if cursor.fetchone()[0] > 0:
-                messagebox.showerror("Error", f"Screen {screen_number} already exists")
+                messagebox.showerror("Error", f"Screen {screen_number} already exists in this cinema")
                 self.db.close()
                 return
                 
-            # Add the screen
+            # Add the screen with cinema association
             cursor.execute(
                 """
-                INSERT INTO Screens (ScreenNumber, SeatCapacity)
-                VALUES (?, ?)
+                INSERT INTO Screens (ScreenNumber, SeatCapacity, CinemaID)
+                VALUES (?, ?, ?)
                 """,
-                (screen_number, capacity)
+                (screen_number, capacity, cinema_id)
             )
             
             conn.commit()
@@ -1540,7 +1568,7 @@ class ManagerPage(BasePage):
             conn.commit()
             self.db.close()
             
-            messagebox.showinfo("Success", f"Screen updated successfully!")
+            messagebox.showinfo("Success", f"Screen deleted successfully!")
             window.destroy()
             self.load_all_screens()  # Reload the screens list
             

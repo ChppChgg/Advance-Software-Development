@@ -107,7 +107,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS Staff (
                 StaffID INTEGER PRIMARY KEY AUTOINCREMENT,
                 FullName Text NOT NULL,
-                Email TEXT UNIQUE NOT NULL
+                Email TEXT NOT NULL
             );
 
             -- Ticket bookings
@@ -262,30 +262,26 @@ class Database:
         conn = self.connect()
         cursor = conn.cursor()
         
-        try:
-            # Check if staff member already exists with this email
-            existing = cursor.execute("SELECT StaffID FROM Staff WHERE Email = ?", (email,)).fetchone()
-            
-            if existing:
-                # staff already exists, just return the ID
-                staff_id = existing[0]
-            else:
-                # Insert new staff
-                cursor.execute(
-                    "INSERT INTO Staff (FullName, Email) VALUES (?, ?)",
-                    (full_name, email)
-                )
-                conn.commit()
-                staff_id = cursor.lastrowid
-                
-            self.close()
-            return staff_id
         
-        except Exception as e:
-            conn.rollback()
-            self.close()
-            print(f"Error adding staff: {e}")
-            return None
+        # Check if staff with the same full name already exists
+        cursor.execute("SELECT StaffID FROM Staff WHERE FullName = ?", (full_name,))
+        existing_staff = cursor.fetchone()
+
+        if existing_staff:
+            # If staff with the same full name exists, return their StaffID
+            return existing_staff[0]
+        
+        # Insert new staff
+        cursor.execute(
+                "INSERT INTO Staff (FullName, Email) VALUES (?, ?)",
+                (full_name, email)
+            )
+        conn.commit()
+        staff_id = cursor.lastrowid
+            
+        self.close()
+        return staff_id
+        
 
     def add_film(self, title, description, actors, genre, rating, duration):
         """Add a new film to the database"""
