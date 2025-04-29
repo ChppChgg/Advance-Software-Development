@@ -282,7 +282,7 @@ class BookingPage(BasePage):
             max_upper = total_seats - max_lower - max_vip
 
             # Get currently booked seats for this screening on this date
-            booked_seats = db.get_booked_seat_counts(screening_id, show_date)
+            booked_seats = db.get_booked_seat_counts(screening_id, show_date, cinema_id)
             already_booked = booked_seats.get(seat_type, 0)
 
             # Determine max seats allowed based on seat type

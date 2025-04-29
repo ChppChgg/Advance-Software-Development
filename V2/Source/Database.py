@@ -602,22 +602,22 @@ class Database:
             self.close()
             return booking_id
     
-    def get_booked_seat_counts(self, screening_id, booking_date):
+    def get_booked_seat_counts(self, screening_id, booking_date, cinema_id):
         self.connect()
         cursor = self.connection.cursor()
         cursor.execute("""
             SELECT SeatType, COUNT(*) as Count
             FROM BookingSeats bs
             JOIN Bookings b ON b.BookingID = bs.BookingID
-            WHERE b.ScreeningID = ? AND b.BookingDate = ? AND b.Status = 'active'
+            WHERE b.ScreeningID = ? AND b.BookingDate = ? AND b.CinemaID = ? AND b.Status = 'active'
             GROUP BY SeatType
-        """, (screening_id, booking_date))
-        
-        results = cursor.fetchall()
-        self.close()
+        """, (screening_id, booking_date, cinema_id))
 
-        # Convert to dictionary like {'VIP': 5, 'Lower': 12, 'Upper': 30}
-        return {row[0]: row[1] for row in results}
+        result = cursor.fetchall()
+        return {row['SeatType']: row['Count'] for row in result}
+
+
+
     
     def insert_booking_seat(self, booking_id, seat_type):
             self.connect()
