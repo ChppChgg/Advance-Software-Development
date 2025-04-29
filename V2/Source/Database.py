@@ -67,11 +67,13 @@ class Database:
                 NumberOfScreens INTEGER NOT NULL CHECK(NumberOfScreens <= 6)
             );
 
-            -- Screens within each cinema
+            -- Screens within each cinema - Modified to include CinemaID
             CREATE TABLE IF NOT EXISTS Screens (
                 ScreenID INTEGER PRIMARY KEY AUTOINCREMENT,
                 ScreenNumber INTEGER NOT NULL,
-                SeatCapacity INTEGER NOT NULL CHECK(SeatCapacity BETWEEN 50 AND 120)
+                SeatCapacity INTEGER NOT NULL CHECK(SeatCapacity BETWEEN 50 AND 120),
+                CinemaID INTEGER NOT NULL,
+                FOREIGN KEY (CinemaID) REFERENCES Cinemas(CinemaID) ON DELETE CASCADE
             );
 
             -- Films available for screenings
@@ -413,38 +415,46 @@ class Database:
             self.close()
     
     def populate_screens(self):
-        screens = [
-            ("1", "120"),
-            ("2", "100"),
-            ("3", "100"),
-            ("4", "80"),
-            ("5", "80"),
-            ("6", "60")
-        ]
-
         try:
             self.connect()
             cursor = self.connection.cursor()
             
-            # Create the table if it doesn't exist
-            cursor.execute('''
-
-            ''')
+            # Get all cinemas
+            cursor.execute("SELECT CinemaID FROM Cinemas")
+            cinemas = cursor.fetchall()
             
-            # Check for duplicates and insert only new titles
-            for screen in screens:
-                cursor.execute("SELECT COUNT(*) FROM Screens WHERE ScreenNumber = ?", (screen[0],))
-                if cursor.fetchone()[0] == 0:
-                    cursor.execute('''
-                        INSERT INTO Screens (ScreenNumber, SeatCapacity)
-                        VALUES (?, ?)
-                    ''', screen)
+            if not cinemas:
+                print("No cinemas found. Please add cinemas first.")
+                return
+            
+            # For each cinema, create 6 screens
+            for cinema in cinemas:
+                cinema_id = cinema['CinemaID']
+                
+                screens = [
+                    (1, 120, cinema_id),
+                    (2, 100, cinema_id),
+                    (3, 100, cinema_id),
+                    (4, 80, cinema_id),
+                    (5, 80, cinema_id),
+                    (6, 60, cinema_id)
+                ]
+                
+                for screen in screens:
+                    cursor.execute("""
+                        INSERT INTO Screens (ScreenNumber, SeatCapacity, CinemaID)
+                        SELECT ?, ?, ?
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM Screens 
+                            WHERE ScreenNumber = ? AND CinemaID = ?
+                        )
+                    """, (screen[0], screen[1], screen[2], screen[0], screen[2]))
 
             self.connection.commit()
             print("Screens inserted successfully.")
             
         except Exception as e:
-            print("Error inserting films:", e)
+            print(f"Error inserting screens: {e}")
         finally:
             self.close()
 
@@ -681,6 +691,107 @@ class Database:
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
+    def get_bookings_by_cinema_id(self, cinema_id):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            SELECT 
+                b.BookingReference,
+                f.Title,
+                b.BookingDate,
+                s.StartTime,
+                COUNT(bs.BookingSeatID) as SeatCount,
+                b.Status
+            FROM Bookings b
+            JOIN Screenings s ON b.ScreeningID = s.ScreeningID
+            JOIN Films f ON s.FilmID = f.FilmID
+            LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
+            WHERE b.CinemaID = ?
+            GROUP BY b.BookingID
+            ORDER BY b.BookingDate DESC
+        """, (cinema_id,))
+        columns = [col[0] for col in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def get_all_bookings(self):
+        return self.get_bookings(cinema_id=None, include_details=False)
+
+    def get_bookings_by_cinema_id(self, cinema_id):
+        return self.get_bookings(cinema_id=cinema_id, include_details=False)
+
+    def get_bookings_with_email_cinema(self, cinema_id=None):
+        return self.get_bookings(cinema_id=cinema_id, include_details=True)
+
+    def get_all_bookings(self):
+        self.connect()
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            SELECT 
+                b.BookingReference,
+                f.Title,
+                b.BookingDate,
+                s.StartTime,
+                COUNT(bs.BookingSeatID) as SeatCount,
+                b.Status
+            FROM Bookings b
+            JOIN Screenings s ON b.ScreeningID = s.ScreeningID
+            JOIN Films f ON s.FilmID = f.FilmID
+            LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
+            GROUP BY b.BookingID
+            ORDER BY b.BookingDate DESC
+        """)
+        columns = [col[0] for col in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def get_bookings(self, cinema_id=None, include_details=False):
+        self.connect()
+        cursor = self.connection.cursor()
+        
+        if include_details:
+            base_query = """
+                SELECT 
+                    b.BookingReference,
+                    f.Title,
+                    b.BookingDate,
+                    s.StartTime,
+                    COUNT(bs.BookingSeatID) as SeatCount,
+                    st.Email as UserEmail,
+                    c.CinemaName,
+                    b.Status
+                FROM Bookings b
+                JOIN Screenings s ON b.ScreeningID = s.ScreeningID
+                JOIN Films f ON s.FilmID = f.FilmID
+                JOIN Staff st ON b.StaffID = st.StaffID
+                JOIN Cinemas c ON b.CinemaID = c.CinemaID
+                LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
+            """
+        else:
+            base_query = """
+                SELECT 
+                    b.BookingReference,
+                    f.Title,
+                    b.BookingDate,
+                    s.StartTime,
+                    COUNT(bs.BookingSeatID) as SeatCount,
+                    b.Status
+                FROM Bookings b
+                JOIN Screenings s ON b.ScreeningID = s.ScreeningID
+                JOIN Films f ON s.FilmID = f.FilmID
+                LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
+            """
+        
+        if cinema_id is not None:
+            # Add WHERE clause for cinema filtering
+            filter_query = base_query + "WHERE b.CinemaID = ? GROUP BY b.BookingID ORDER BY b.BookingDate DESC"
+            cursor.execute(filter_query, (cinema_id,))
+        else:
+            # No filtering
+            query = base_query + "GROUP BY b.BookingID ORDER BY b.BookingDate DESC"
+            cursor.execute(query)
+        
+        columns = [col[0] for col in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
     def cancel_booking_by_reference(self, booking_ref):
         self.connect()
         cursor = self.connection.cursor()
@@ -754,6 +865,48 @@ class Database:
 
         # Return the role name, if found, otherwise None
         return role_row['RoleName'] if role_row else None
+    
+    def add_cinema_id_to_screens(self):
+        try:
+            conn = self.connect()
+            cursor = conn.cursor()
+            
+            # Check if CinemaID column exists
+            cursor.execute("PRAGMA table_info(Screens)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            if "CinemaID" not in columns:
+                print("Adding CinemaID column to Screens table...")
+                
+                # Add the column
+                cursor.execute("ALTER TABLE Screens ADD COLUMN CinemaID INTEGER")
+                
+                # Assign screens to cinemas evenly
+                cursor.execute("SELECT CinemaID FROM Cinemas ORDER BY CinemaID")
+                cinemas = cursor.fetchall()
+                
+                if cinemas:
+                    # Get all screens
+                    cursor.execute("SELECT ScreenID FROM Screens ORDER BY ScreenID")
+                    screens = cursor.fetchall()
+                    
+                    # Distribute screens among cinemas
+                    for i, screen in enumerate(screens):
+                        cinema_id = cinemas[i % len(cinemas)]['CinemaID']
+                        cursor.execute("UPDATE Screens SET CinemaID = ? WHERE ScreenID = ?", 
+                                    (cinema_id, screen['ScreenID']))
+                
+                conn.commit()
+                print("Migration completed successfully")
+            else:
+                print("CinemaID column already exists")
+                
+        except Exception as e:
+            print(f"Migration error: {e}")
+            if conn:
+                conn.rollback()
+        finally:
+            self.close()
 
 
 

@@ -91,20 +91,26 @@ class BookingPage(BasePage):
             .grid(row=7, column=0, sticky="w", pady=10)
         self.name_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
         self.name_entry.grid(row=7, column=1, pady=10, padx=10, sticky="w")
-
-                # Card Number
-        tk.Label(form_frame, text="Card Number:", font=("Arial", 12), bg="white") \
+        
+        # Customer Email
+        tk.Label(form_frame, text="Customer Email:", font=("Arial", 12), bg="white") \
             .grid(row=8, column=0, sticky="w", pady=10)
+        self.email_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
+        self.email_entry.grid(row=8, column=1, pady=10, padx=10, sticky="w")
+
+        # Card Number
+        tk.Label(form_frame, text="Card Number:", font=("Arial", 12), bg="white") \
+            .grid(row=9, column=0, sticky="w", pady=10)
         self.card_entry = ttk.Entry(form_frame, font=("Arial", 12), width=30)
-        self.card_entry.grid(row=8, column=1, pady=10, padx=10, sticky="w")
+        self.card_entry.grid(row=9, column=1, pady=10, padx=10, sticky="w")
         self.card_entry.config(validate="key", validatecommand=(self.register(lambda P: P.isdigit() and len(P) <= 16), '%P'))
 
         # Expiry Date
         tk.Label(form_frame, text="Expiry Date (MM/YY):", font=("Arial", 12), bg="white") \
-            .grid(row=9, column=0, sticky="w", pady=10)
+            .grid(row=10, column=0, sticky="w", pady=10)
 
         expiry_frame = tk.Frame(form_frame, bg="white")
-        expiry_frame.grid(row=9, column=1, sticky="w", pady=10)
+        expiry_frame.grid(row=10, column=1, sticky="w", pady=10)
 
         self.expiry_month = ttk.Combobox(expiry_frame, values=[f"{i:02}" for i in range(1, 13)],
                                         width=5, font=("Arial", 12), state="readonly")
@@ -119,17 +125,17 @@ class BookingPage(BasePage):
 
         # CVV
         tk.Label(form_frame, text="CVV:", font=("Arial", 12), bg="white") \
-            .grid(row=10, column=0, sticky="w", pady=10)
+            .grid(row=11, column=0, sticky="w", pady=10)
         self.cvv_entry = ttk.Entry(form_frame, font=("Arial", 12), width=10)
-        self.cvv_entry.grid(row=10, column=1, pady=10, padx=10, sticky="w")
+        self.cvv_entry.grid(row=11, column=1, pady=10, padx=10, sticky="w")
         self.cvv_entry.config(validate="key", validatecommand=(self.register(lambda P: P.isdigit() and len(P) <= 3), '%P'))
 
 
         # Proceed
-        tk.Button(form_frame, text="Proceed to Seat Selection",
+        tk.Button(form_frame, text="Book Now",
                   font=("Arial",12,"bold"), bg="#1E3F66", fg="white",
                   padx=20, pady=8, command=self.booking_placeholder) \
-            .grid(row=11, column=0, columnspan=2, pady=30)
+            .grid(row=12, column=0, columnspan=2, pady=30)
 
         # Load data
         self.load_cinema_rows()
