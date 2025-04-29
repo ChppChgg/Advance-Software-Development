@@ -103,9 +103,9 @@ class Database:
                 FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE         
             );
 
-            --  Staff who book tickets (could also reference Users)
-            CREATE TABLE IF NOT EXISTS Staff (
-                StaffID INTEGER PRIMARY KEY AUTOINCREMENT,
+            --  Customers who book tickets (could also reference Users)
+            CREATE TABLE IF NOT EXISTS Customers (
+                CustomerID INTEGER PRIMARY KEY AUTOINCREMENT,
                 FullName Text NOT NULL,
                 Email TEXT NOT NULL
             );
@@ -113,7 +113,8 @@ class Database:
             -- Ticket bookings
             CREATE TABLE IF NOT EXISTS Bookings (
                 BookingID INTEGER PRIMARY KEY AUTOINCREMENT,
-                StaffID INTEGER NOT NULL,
+                UserID INTEGER NOT NULL,
+                CustomerID INTEGER NOT NULL,
                 CinemaID INTEGER NOT NULL,
                 ScreeningID INTEGER NOT NULL,
                 BookingReference TEXT NOT NULL UNIQUE,
@@ -121,7 +122,7 @@ class Database:
                 BookingDate DATE NOT NULL,
                 Status TEXT DEFAULT 'active' CHECK(Status IN ('active', 'cancelled')),
                 CancellationFee REAL DEFAULT 0,
-                FOREIGN KEY (StaffID) REFERENCES Staff(StaffID) ON DELETE CASCADE,
+                FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID) ON DELETE CASCADE,
                 FOREIGN KEY (CinemaID) REFERENCES Cinemas(CinemaID) ON DELETE CASCADE,
                 FOREIGN KEY (ScreeningID) REFERENCES Screenings(ScreeningID) ON DELETE CASCADE
             );
@@ -257,30 +258,30 @@ class Database:
             self.close()
             return False, f"Error: {e}"
     
-    def add_staff(self, full_name, email):
-        """Add a new staff to the database"""
+    def add_customer(self, full_name, email):
+        """Add a new customer to the database"""
         conn = self.connect()
         cursor = conn.cursor()
         
-        
-        # Check if staff with the same full name already exists
-        cursor.execute("SELECT StaffID FROM Staff WHERE FullName = ?", (full_name,))
-        existing_staff = cursor.fetchone()
+    
+        # Check if customer with the same full name already exists
+        cursor.execute("SELECT CustomerID FROM Customers WHERE FullName = ?", (full_name,))
+        existing_customer = cursor.fetchone()
 
-        if existing_staff:
-            # If staff with the same full name exists, return their StaffID
-            return existing_staff[0]
+        if existing_customer:
+            # If customer with the same full name exists, return their CustomerID
+            return existing_customer[0]
         
-        # Insert new staff
+        # Insert new customer
         cursor.execute(
-                "INSERT INTO Staff (FullName, Email) VALUES (?, ?)",
+                "INSERT INTO Customers (FullName, Email) VALUES (?, ?)",
                 (full_name, email)
             )
         conn.commit()
-        staff_id = cursor.lastrowid
+        customer_id = cursor.lastrowid
             
         self.close()
-        return staff_id
+        return customer_id
         
 
     def add_film(self, title, description, actors, genre, rating, duration):
@@ -583,13 +584,14 @@ class Database:
         finally:
             self.close()
 
-    def insert_booking(self, staff_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, bookingdate, status):
+    def insert_booking(self, user_id, customer_id, cinema_id, screening_id, booking_ref, total_price, cancellationfee, bookingdate, status):
         try:
             self.connect()
             cursor = self.connection.cursor()
             cursor.execute("""
                 INSERT INTO Bookings (
-                    StaffID,
+                    UserID,
+                    CustomerID,
                     CinemaID,
                     ScreeningID,
                     BookingReference,
@@ -597,8 +599,8 @@ class Database:
                     BookingDate,
                     Status,
                     CancellationFee
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (staff_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, status, cancellationfee))
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (customer_id, user_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, status, cancellationfee))
             booking_id = cursor.lastrowid
             self.connection.commit()
         except Exception as e:
@@ -658,14 +660,14 @@ class Database:
         row = cursor.fetchone()
         return row['CinemaID'] if row else None
 
-    def get_staff_id_by_email(self, email):
+    def get_customer_id_by_email(self, email):
         self.connect()
         cursor = self.connection.cursor()
-        cursor.execute("SELECT StaffID FROM Staff WHERE Email = ?", (email,))
+        cursor.execute("SELECT CustomreID FROM Customers WHERE Email = ?", (email,))
         row = cursor.fetchone()
         return row[0] if row else None
 
-    def get_bookings_by_staff_id(self, staff_id):
+    def get_bookings_by_customer_id(self, user_id):
         self.connect()
         cursor = self.connection.cursor()
         cursor.execute("""
@@ -680,10 +682,10 @@ class Database:
             JOIN Screenings s ON b.ScreeningID = s.ScreeningID
             JOIN Films f ON s.FilmID = f.FilmID
             LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
-            WHERE b.StaffID = ?
+            WHERE b.UserID = ?
             GROUP BY b.BookingID
             ORDER BY b.BookingDate DESC
-        """, (staff_id,))
+        """, (user_id,))
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -751,13 +753,13 @@ class Database:
                     b.BookingDate,
                     s.StartTime,
                     COUNT(bs.BookingSeatID) as SeatCount,
-                    st.Email as UserEmail,
+                    cu.Email as UserEmail,
                     c.CinemaName,
                     b.Status
                 FROM Bookings b
                 JOIN Screenings s ON b.ScreeningID = s.ScreeningID
                 JOIN Films f ON s.FilmID = f.FilmID
-                JOIN Staff st ON b.StaffID = st.StaffID
+                JOIN Customers cu ON b.CustomerID = cu.CustomerID
                 JOIN Cinemas c ON b.CinemaID = c.CinemaID
                 LEFT JOIN BookingSeats bs ON b.BookingID = bs.BookingID
             """
@@ -777,11 +779,9 @@ class Database:
             """
         
         if cinema_id is not None:
-            # Add WHERE clause for cinema filtering
             filter_query = base_query + "WHERE b.CinemaID = ? GROUP BY b.BookingID ORDER BY b.BookingDate DESC"
             cursor.execute(filter_query, (cinema_id,))
         else:
-            # No filtering
             query = base_query + "GROUP BY b.BookingID ORDER BY b.BookingDate DESC"
             cursor.execute(query)
         
@@ -902,7 +902,20 @@ class Database:
             if conn:
                 conn.rollback()
         finally:
+
             self.close()
+
+    def get_user_by_username(self, username):
+        """Fetch user information by username"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM Users WHERE Username = ?", (username,))
+        user = cursor.fetchone()
+
+        self.close()
+        return user
+
 
 
 
