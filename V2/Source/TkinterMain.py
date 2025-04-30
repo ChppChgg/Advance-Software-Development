@@ -101,7 +101,7 @@ class HorizonCinemas(tk.Tk):
     
     def get_user_name(self):
         """Return the current username or Guest if not logged in"""
-        return self.user if self.user else "Guest"
+        return self.user if self.user else "N/A"
     
     def get_user_role(self):
         """Return the current user role or N/A if not logged in"""
