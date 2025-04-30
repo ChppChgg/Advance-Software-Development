@@ -96,25 +96,38 @@ class LoginPage(BasePage):
         self.username_entry.bind("<Return>", lambda event: self.login_user())
         self.password_entry.bind("<Return>", lambda event: self.login_user())
         
+    def is_valid_input(self, input_text):
+        """Validate input to prevent SQL injection"""
+        dangerous_chars = ["'", '"', ';', '--', '/*', '*/', 'OR 1=1', 'OR TRUE', '=', 'DROP']
+        for char in dangerous_chars:
+            if char.lower() in input_text.lower():
+                return False
+        return True
+
     def login_user(self):
         """Handle user login verification and process"""
         username = self.username_entry.get().strip()
         password = self.password_entry.get()
-        
+
         # Basic validation
         if not username or not password:
             self.error_label.config(text="Username and password are required")
             return
-            
+
+        # Input validation to protect against SQL injection
+        if not self.is_valid_input(username) or not self.is_valid_input(password):
+            self.error_label.config(text="Invalid input characters detected")
+            return
+
         # Verify credentials using database
         user = self.db.authenticate_user(username, password)
-        
+
         if user:
             # Clear any error messages and reset form
             self.error_label.config(text="")
             self.username_entry.delete(0, 'end')
             self.password_entry.delete(0, 'end')
-            
+
             # Login the user (this will refresh homepage)
             self.controller.login(user['Username'], user['RoleName'])
             messagebox.showinfo("Login Successful", f"Welcome back, {user['Username']}!")

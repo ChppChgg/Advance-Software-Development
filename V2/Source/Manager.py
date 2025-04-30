@@ -4,25 +4,23 @@ Manager page functions
 import tkinter as tk
 from tkinter import ttk, messagebox
 from Basepage import BasePage
-from Database import Database  # Make sure this import is present
-
+from Database import Database  
 #Harry Elson, 23021935
 #Matt Nogodula, 23015215
 #Jerry Lin, 23024553
 
 class ManagerPage(BasePage):
     """Manager page for system management"""
+
     def __init__(self, parent, controller):
         BasePage.__init__(self, parent, controller)
-        
-        # Create database instance for this page
         self.db = Database()
         
         # Content area
         content = tk.Frame(self.content_frame, bg="white")
         content.pack(fill="both", expand=True, padx=20, pady=20)
         
-        # Page title
+        # Page title to display on top left
         page_title = tk.Label(
             content,
             text="Manager Dashboard",
@@ -31,24 +29,22 @@ class ManagerPage(BasePage):
         )
         page_title.pack(anchor="w", pady=(0, 20))
         
-        # Tabs for different Manager functions
+        # Tabs for different tabs for the Manager functions
         tab_control = ttk.Notebook(content)
         
+        # Create tabs on the page to display data on Screenings, users and cinemas
         # Screenings tab
         screenings_tab = ttk.Frame(tab_control)
         tab_control.add(screenings_tab, text="Screenings")
-        
         # Users tab
         users_tab = ttk.Frame(tab_control)
         tab_control.add(users_tab, text="Users")
-        
+        #Cinemas tab
         cinemas_tab = ttk.Frame(tab_control)
         tab_control.add(cinemas_tab, text="Cinemas")
-
+        tab_control.pack(expand=1, fill="both") # fill space on page
         
-        tab_control.pack(expand=1, fill="both")
-        
-        # Set up tabs with data
+        #initialze tab functions
         self.setup_screenings_tab(screenings_tab)
         self.setup_users_tab(users_tab)
         self.setup_cinemas_tab(cinemas_tab)
@@ -58,17 +54,13 @@ class ManagerPage(BasePage):
         # Main frame for the tab content
         self.screenings_frame = tk.Frame(parent)
         self.screenings_frame.pack(fill="both", expand=True)
-        
-        # We'll initially show the cinema selection interface
-        self.show_cinema_selection_interface()
+        self.show_cinema_selection_interface() #Open up on cinema's tab
 
     def show_cinema_selection_interface(self):
         """Show interface for selecting cinemas before showing screenings"""
-        # Clear any existing content in the screenings frame
-        for widget in self.screenings_frame.winfo_children():
+        for widget in self.screenings_frame.winfo_children(): # clear UI 
             widget.destroy()
-        
-        # Title label
+        #Show cinema tab title
         title_label = tk.Label(
             self.screenings_frame, 
             text="Select a Cinema to View Screenings",
@@ -78,13 +70,13 @@ class ManagerPage(BasePage):
         
         # Get all cinemas from the database
         try:
-            conn = self.db.connect()
+            conn = self.db.connect() # open connection
             cursor = conn.cursor()
-            cursor.execute("SELECT CinemaID, CinemaName FROM Cinemas ORDER BY CinemaName")
-            cinemas = cursor.fetchall()
-            self.db.close()
+            cursor.execute("SELECT CinemaID, CinemaName FROM Cinemas ORDER BY CinemaName") #get data for cinema
+            cinemas = cursor.fetchall() #fetches data from query
+            self.db.close() #close connection
             
-            if not cinemas:
+            if not cinemas: #error handling incase no data exists
                 no_cinemas_label = tk.Label(
                     self.screenings_frame,
                     text="No cinemas found in the database.",
@@ -93,18 +85,15 @@ class ManagerPage(BasePage):
                 no_cinemas_label.pack(pady=20)
                 return
             
-            # Create a container frame for the scrollable area
+            #allow scrolling
             container_frame = tk.Frame(self.screenings_frame)
             container_frame.pack(fill="both", expand=True, padx=10, pady=10)
-            
             # Create a canvas for scrolling
             canvas = tk.Canvas(container_frame)
             scrollbar = ttk.Scrollbar(container_frame, orient="vertical", command=canvas.yview)
+            buttons_frame = tk.Frame(canvas) #buttons for cinema list
             
-            # Create a frame inside the canvas to hold all buttons
-            buttons_frame = tk.Frame(canvas)
-            
-            # Configure scrolling
+            #Link scroll bar and canvas holding buttons
             canvas.configure(yscrollcommand=scrollbar.set)
             canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
@@ -112,7 +101,7 @@ class ManagerPage(BasePage):
             # Add the buttons frame to the canvas
             canvas_window = canvas.create_window((0, 0), window=buttons_frame, anchor="nw")
             
-            # Create button for "All Cinemas" option
+            #button to show all cinema listings
             all_cinemas_btn = tk.Button(
                 buttons_frame,
                 text="View All Cinemas",
@@ -126,22 +115,20 @@ class ManagerPage(BasePage):
             for cinema in cinemas:
                 cinema_btn = tk.Button(
                     buttons_frame,
-                    text=cinema["CinemaName"],
+                    text=cinema["CinemaName"], #gets cinema name from db
                     width=25,
                     font=("Arial", 11),
                     command=lambda cid=cinema["CinemaID"], cname=cinema["CinemaName"]: self.show_screenings_for_cinema(cid, cname)
                 )
                 cinema_btn.pack(pady=8)
             
-            # Update the canvas's scroll region when the buttons frame changes size
+            # Update the when new cinema's are insertedd
             def configure_scroll_region(event):
                 canvas.configure(scrollregion=canvas.bbox("all"))
-                # Set canvas width to match buttons
                 canvas.itemconfig(canvas_window, width=canvas.winfo_width())
-            
             buttons_frame.bind("<Configure>", configure_scroll_region)
             
-            # Make canvas resize with window
+            #responsive button design
             def resize_canvas(event):
                 canvas.itemconfig(canvas_window, width=event.width)
             
@@ -161,7 +148,6 @@ class ManagerPage(BasePage):
         # Clear the screenings frame
         for widget in self.screenings_frame.winfo_children():
             widget.destroy()
-        
         # Create a header with back button and cinema name
         header_frame = tk.Frame(self.screenings_frame)
         header_frame.pack(fill="x", pady=(10, 20))
@@ -191,7 +177,7 @@ class ManagerPage(BasePage):
         columns = ("id", "cinema", "film", "screen", "start_time", "end_time", "seats")
         self.screenings_tree = ttk.Treeview(list_frame, columns=columns, show="headings")
         
-        # Define headings
+        # Define headings for the table
         self.screenings_tree.heading("id", text="ID")
         self.screenings_tree.heading("cinema", text="Cinema")
         self.screenings_tree.heading("film", text="Film")
@@ -200,7 +186,7 @@ class ManagerPage(BasePage):
         self.screenings_tree.heading("end_time", text="End Time")
         self.screenings_tree.heading("seats", text="Total Seats")
         
-        # Define column widths
+        # Define column 
         self.screenings_tree.column("id", width=50)
         self.screenings_tree.column("cinema", width=150)
         self.screenings_tree.column("film", width=200)

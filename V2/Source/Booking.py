@@ -129,6 +129,7 @@ class BookingPage(BasePage):
             .grid(row=11, column=0, sticky="w", pady=10)
         self.cvv_entry = ttk.Entry(form_frame, font=("Arial", 12), width=10)
         self.cvv_entry.grid(row=11, column=1, pady=10, padx=10, sticky="w")
+        self.cvv_entry.config(show="*")
         self.cvv_entry.config(validate="key", validatecommand=(self.register(lambda P: P.isdigit() and len(P) <= 3), '%P'))
 
 
@@ -158,14 +159,45 @@ class BookingPage(BasePage):
         # Also preload times
         self.on_film_selected(None)
 
-    def on_film_selected(self, event):
-        idx = self.film_combo.current()
-        if idx < 0 or idx >= len(self.film_data): return
-        film_id = self.film_data[idx]['FilmID']
-        screenings = Database("horizon_cinemas.db").get_screenings_by_film(film_id)
-        times = [s['StartTime'] for s in screenings]
-        self.time_combo['values'] = times if times else ["No screenings available"]
-        self.time_combo.current(0)
+    def on_film_selected(self, event=None):
+        selected_film = self.film_combo.get()
+        if not selected_film:
+            return
+        
+        film_title = selected_film.split(" | ")[0]
+        
+        selected_cinema = self.cinema_combo.get()
+        if not selected_cinema:
+            return
+            
+        cinema_name = selected_cinema.split(" | ")[0]
+        
+        db = Database()
+        cursor = db.connect().cursor()
+        cursor.execute("SELECT FilmID FROM Films WHERE Title = ?", (film_title,))
+        film_result = cursor.fetchone()
+        
+        if not film_result:
+            print(f"Film not found: '{film_title}'")
+            return
+            
+        film_id = film_result['FilmID']
+        
+        cursor.execute("SELECT CinemaID FROM Cinemas WHERE CinemaName = ?", (cinema_name,))
+        cinema_result = cursor.fetchone()
+        
+        if not cinema_result:
+            print(f"Cinema not found: '{cinema_name}'")
+            return
+            
+        cinema_id = cinema_result['CinemaID']
+        
+        screenings = db.get_screenings_by_film(film_id, cinema_id)
+        times = [screening['StartTime'] for screening in screenings]
+        self.time_combo['values'] = times
+        self.time_combo.set("")
+        self.screening_map = {screening['StartTime']: screening['ScreeningID'] for screening in screenings}
+        self.screen_map = {screening['StartTime']: screening['ScreenID'] for screening in screenings}
         self.calculate_price()
 
     def calculate_price(self):

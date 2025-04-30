@@ -197,11 +197,11 @@ class Database:
         """Authenticate a user by username and password"""
         conn = self.connect()
         cursor = conn.cursor()
-        
+
         # Hash the password for comparison
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        # Query for user with matching credentials
+
+        # Query for user with matching credentials using parameterized query
         user = cursor.execute(
             """
             SELECT u.UserID, u.Username, r.RoleName 
@@ -211,7 +211,7 @@ class Database:
             """, 
             (username, password_hash)
         ).fetchone()
-        
+
         self.close()
         return user if user else None
         
@@ -548,18 +548,30 @@ class Database:
         finally:
             self.close()
 
-    def get_screenings_by_film(self, film_id):
-        """Fetch screening start times by film ID."""
+    def get_screenings_by_film(self, film_id, cinema_id=None):
+        """Fetch screening start times by film ID and optional cinema ID."""
         try:
             self.connect()
             cursor = self.connection.cursor()
-            query = """
-                SELECT ScreeningID, ScreenID, StartTime
-                FROM Screenings
-                WHERE FilmID = ?
-                ORDER BY StartTime
-            """
-            cursor.execute(query, (film_id,))
+            
+            if cinema_id:
+                query = """
+                    SELECT sc.ScreeningID, sc.ScreenID, sc.StartTime
+                    FROM Screenings sc
+                    JOIN Screens s ON sc.ScreenID = s.ScreenID
+                    WHERE sc.FilmID = ? AND s.CinemaID = ?
+                    ORDER BY sc.StartTime
+                """
+                cursor.execute(query, (film_id, cinema_id))
+            else:
+                query = """
+                    SELECT sc.ScreeningID, sc.ScreenID, sc.StartTime
+                    FROM Screenings sc
+                    WHERE sc.FilmID = ?
+                    ORDER BY sc.StartTime
+                """
+                cursor.execute(query, (film_id,))
+                
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except Exception as e:
@@ -913,7 +925,7 @@ class Database:
 
         self.close()
         return user
-    
+
 
 
 
