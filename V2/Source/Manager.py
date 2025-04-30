@@ -44,10 +44,7 @@ class ManagerPage(BasePage):
         
         cinemas_tab = ttk.Frame(tab_control)
         tab_control.add(cinemas_tab, text="Cinemas")
-        
-        # Screens tab
-        screens_tab = ttk.Frame(tab_control)
-        tab_control.add(screens_tab, text="Screens")
+
         
         tab_control.pack(expand=1, fill="both")
         
@@ -55,12 +52,139 @@ class ManagerPage(BasePage):
         self.setup_screenings_tab(screenings_tab)
         self.setup_users_tab(users_tab)
         self.setup_cinemas_tab(cinemas_tab)
-        self.setup_screens_tab(screens_tab)
 
     def setup_screenings_tab(self, parent):
         """Set up the screenings management tab"""
+        # Main frame for the tab content
+        self.screenings_frame = tk.Frame(parent)
+        self.screenings_frame.pack(fill="both", expand=True)
+        
+        # We'll initially show the cinema selection interface
+        self.show_cinema_selection_interface()
+
+    def show_cinema_selection_interface(self):
+        """Show interface for selecting cinemas before showing screenings"""
+        # Clear any existing content in the screenings frame
+        for widget in self.screenings_frame.winfo_children():
+            widget.destroy()
+        
+        # Title label
+        title_label = tk.Label(
+            self.screenings_frame, 
+            text="Select a Cinema to View Screenings",
+            font=("Arial", 14, "bold")
+        )
+        title_label.pack(pady=(20, 30))
+        
+        # Get all cinemas from the database
+        try:
+            conn = self.db.connect()
+            cursor = conn.cursor()
+            cursor.execute("SELECT CinemaID, CinemaName FROM Cinemas ORDER BY CinemaName")
+            cinemas = cursor.fetchall()
+            self.db.close()
+            
+            if not cinemas:
+                no_cinemas_label = tk.Label(
+                    self.screenings_frame,
+                    text="No cinemas found in the database.",
+                    font=("Arial", 12)
+                )
+                no_cinemas_label.pack(pady=20)
+                return
+            
+            # Create a container frame for the scrollable area
+            container_frame = tk.Frame(self.screenings_frame)
+            container_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            # Create a canvas for scrolling
+            canvas = tk.Canvas(container_frame)
+            scrollbar = ttk.Scrollbar(container_frame, orient="vertical", command=canvas.yview)
+            
+            # Create a frame inside the canvas to hold all buttons
+            buttons_frame = tk.Frame(canvas)
+            
+            # Configure scrolling
+            canvas.configure(yscrollcommand=scrollbar.set)
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+            
+            # Add the buttons frame to the canvas
+            canvas_window = canvas.create_window((0, 0), window=buttons_frame, anchor="nw")
+            
+            # Create button for "All Cinemas" option
+            all_cinemas_btn = tk.Button(
+                buttons_frame,
+                text="View All Cinemas",
+                width=25,
+                font=("Arial", 11),
+                command=lambda: self.show_screenings_for_cinema(None)
+            )
+            all_cinemas_btn.pack(pady=8)
+            
+            # Create buttons for each cinema
+            for cinema in cinemas:
+                cinema_btn = tk.Button(
+                    buttons_frame,
+                    text=cinema["CinemaName"],
+                    width=25,
+                    font=("Arial", 11),
+                    command=lambda cid=cinema["CinemaID"], cname=cinema["CinemaName"]: self.show_screenings_for_cinema(cid, cname)
+                )
+                cinema_btn.pack(pady=8)
+            
+            # Update the canvas's scroll region when the buttons frame changes size
+            def configure_scroll_region(event):
+                canvas.configure(scrollregion=canvas.bbox("all"))
+                # Set canvas width to match buttons
+                canvas.itemconfig(canvas_window, width=canvas.winfo_width())
+            
+            buttons_frame.bind("<Configure>", configure_scroll_region)
+            
+            # Make canvas resize with window
+            def resize_canvas(event):
+                canvas.itemconfig(canvas_window, width=event.width)
+            
+            canvas.bind("<Configure>", resize_canvas)
+            
+            # Enable scrolling with mouse wheel
+            def on_mousewheel(event):
+                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            
+            canvas.bind_all("<MouseWheel>", on_mousewheel)
+                
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Could not load cinemas: {e}")
+
+    def show_screenings_for_cinema(self, cinema_id, cinema_name=None):
+        """Show screenings for the selected cinema"""
+        # Clear the screenings frame
+        for widget in self.screenings_frame.winfo_children():
+            widget.destroy()
+        
+        # Create a header with back button and cinema name
+        header_frame = tk.Frame(self.screenings_frame)
+        header_frame.pack(fill="x", pady=(10, 20))
+        
+        # Back button
+        back_btn = tk.Button(
+            header_frame,
+            text="← Back to Cinema Selection",
+            command=self.show_cinema_selection_interface
+        )
+        back_btn.pack(side="left", padx=10)
+        
+        # Title showing which cinema we're viewing
+        title_text = "All Screenings" if cinema_id is None else f"Screenings for {cinema_name}"
+        title_label = tk.Label(
+            header_frame,
+            text=title_text,
+            font=("Arial", 12, "bold")
+        )
+        title_label.pack(side="right", padx=10)
+        
         # Screenings list frame
-        list_frame = tk.Frame(parent)
+        list_frame = tk.Frame(self.screenings_frame)
         list_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         
         # Screenings treeview - Add cinema column
@@ -69,7 +193,7 @@ class ManagerPage(BasePage):
         
         # Define headings
         self.screenings_tree.heading("id", text="ID")
-        self.screenings_tree.heading("cinema", text="Cinema")  # New column
+        self.screenings_tree.heading("cinema", text="Cinema")
         self.screenings_tree.heading("film", text="Film")
         self.screenings_tree.heading("screen", text="Screen")
         self.screenings_tree.heading("start_time", text="Start Time")
@@ -78,7 +202,7 @@ class ManagerPage(BasePage):
         
         # Define column widths
         self.screenings_tree.column("id", width=50)
-        self.screenings_tree.column("cinema", width=150)  # New column
+        self.screenings_tree.column("cinema", width=150)
         self.screenings_tree.column("film", width=200)
         self.screenings_tree.column("screen", width=80)
         self.screenings_tree.column("start_time", width=100)
@@ -93,11 +217,11 @@ class ManagerPage(BasePage):
         scrollbar.pack(side="right", fill="y")
         self.screenings_tree.pack(fill="both", expand=True)
         
-        # Load screenings data
-        self.load_screenings_data()
+        # Load screenings data for the selected cinema
+        self.load_screenings_data(cinema_id)
         
         # Control frame
-        control_frame = tk.Frame(parent)
+        control_frame = tk.Frame(self.screenings_frame)
         control_frame.pack(side="right", fill="y", padx=10, pady=10)
         
         # Add screening button
@@ -132,13 +256,12 @@ class ManagerPage(BasePage):
             control_frame,
             text="Refresh List",
             width=15,
-            command=self.load_screenings_data
+            command=lambda: self.load_screenings_data(cinema_id)
         )
         refresh_button.pack(pady=5)
 
-    def load_screenings_data(self):
+    def load_screenings_data(self, cinema_id=None):
         """Load screenings data from database into treeview"""
-        # Clear existing data
         for item in self.screenings_tree.get_children():
             self.screenings_tree.delete(item)
             
@@ -147,16 +270,22 @@ class ManagerPage(BasePage):
             conn = self.db.connect()
             cursor = conn.cursor()
             
-            # Query with cinema name from Screens-Cinemas relationship
-            cursor.execute("""
+            # Base query with cinema name from Screens-Cinemas relationship
+            query = """
                 SELECT s.ScreeningID, f.Title, scr.ScreenNumber, s.StartTime, 
-                       s.EndTime, s.TotalSeats, c.CinemaName
+                      s.EndTime, s.TotalSeats, c.CinemaName, c.CinemaID
                 FROM Screenings s
                 JOIN Films f ON s.FilmID = f.FilmID
                 JOIN Screens scr ON s.ScreenID = scr.ScreenID
                 LEFT JOIN Cinemas c ON scr.CinemaID = c.CinemaID
-                ORDER BY c.CinemaName, s.StartTime
-            """)
+            """
+            
+            # Add filter for specific cinema if provided
+            if cinema_id:
+                query += " WHERE c.CinemaID = ?"
+                cursor.execute(query + " ORDER BY s.StartTime", (cinema_id,))
+            else:
+                cursor.execute(query + " ORDER BY c.CinemaName, s.StartTime")
             
             screenings = cursor.fetchall()
             
@@ -181,7 +310,7 @@ class ManagerPage(BasePage):
             self.screenings_tree.insert("", "end", values=("Error loading data", "", "", "", "", "", ""))
         finally:
             self.db.close()  # Use local db
-    
+
     def show_add_screening_dialog(self):
         """Show dialog to add a new screening"""
         # Create a new window
@@ -574,7 +703,6 @@ class ManagerPage(BasePage):
     
     def load_users_data(self):
         """Load users data from database into treeview"""
-        # Clear existing data
         for item in self.users_tree.get_children():
             self.users_tree.delete(item)
         
@@ -975,7 +1103,6 @@ class ManagerPage(BasePage):
     
     def load_cinemas_data(self):
         """Load cinema data from database into treeview"""
-        # Clear existing data
         for item in self.cinemas_tree.get_children():
             self.cinemas_tree.delete(item)
             
@@ -1093,6 +1220,7 @@ class ManagerPage(BasePage):
             messagebox.showinfo("Success", f"Cinema '{name}' added successfully!")
             window.destroy()
             self.load_cinemas_data()  # Reload the cinemas list
+            self.refresh_screenings_cinema_list()  # Refresh the cinema selection in Screenings tab
             
         except ValueError:
             messagebox.showerror("Error", "Number of screens must be a number")
@@ -1219,6 +1347,7 @@ class ManagerPage(BasePage):
             messagebox.showinfo("Success", f"Cinema '{name}' updated successfully!")
             window.destroy()
             self.load_cinemas_data()  # Reload the cinemas list
+            self.refresh_screenings_cinema_list()  # Refresh the cinema selection in Screenings tab
             
         except ValueError:
             messagebox.showerror("Error", "Number of screens must be a number")
@@ -1259,356 +1388,19 @@ class ManagerPage(BasePage):
                 self.db.close()
                 
                 messagebox.showinfo("Success", f"Cinema '{cinema_name}' deleted successfully!")
-                self.load_cinemas_data()  # Reload the cinemas list
+                self.load_cinemas_data()
+                self.refresh_screenings_cinema_list()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete cinema: {e}")
-    
-    def setup_screens_tab(self, parent):
-        """Set up the screens management tab"""
-        # Screens list frame
-        list_frame = tk.Frame(parent)
-        list_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-        
-        # Screens treeview
-        columns = ("id", "number", "capacity")
-        self.screens_tree = ttk.Treeview(list_frame, columns=columns, show="headings")
-        
-        # Define headings
-        self.screens_tree.heading("id", text="ID")
-        self.screens_tree.heading("number", text="Screen #")
-        self.screens_tree.heading("capacity", text="Capacity")
-        
-        # Define column widths
-        self.screens_tree.column("id", width=50)
-        self.screens_tree.column("number", width=80)
-        self.screens_tree.column("capacity", width=80)
-        
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.screens_tree.yview)
-        self.screens_tree.configure(yscrollcommand=scrollbar.set)
-        
-        # Pack tree and scrollbar
-        scrollbar.pack(side="right", fill="y")
-        self.screens_tree.pack(fill="both", expand=True)
-        
-        # Screens control frame
-        control_frame = tk.Frame(parent)
-        control_frame.pack(side="right", fill="y", padx=10, pady=10)
-        
-        # Add screen button
-        add_button = tk.Button(
-            control_frame,
-            text="Add Screen",
-            width=15,
-            command=self.show_add_screen_dialog
-        )
-        add_button.pack(pady=5)
-        
-        # Edit screen button
-        edit_button = tk.Button(
-            control_frame,
-            text="Edit Screen",
-            width=15,
-            command=self.show_edit_screen_dialog
-        )
-        edit_button.pack(pady=5)
-        
-        # Delete screen button
-        delete_button = tk.Button(
-            control_frame,
-            text="Delete Screen",
-            width=15,
-            command=self.delete_screen
-        )
-        delete_button.pack(pady=5)
-        
-        # Load all screens initially
-        self.load_all_screens()
 
-    def load_all_screens(self):
-        """Load all screens data"""
-        # Clear existing data
-        for item in self.screens_tree.get_children():
-            self.screens_tree.delete(item)
-            
-        try:
-            conn = self.db.connect()
-            cursor = conn.cursor()
-            
-            # Query to get screen info
-            cursor.execute("""
-                SELECT ScreenID, ScreenNumber, SeatCapacity
-                FROM Screens
-                ORDER BY ScreenNumber
-            """)
-            
-            screens = cursor.fetchall()
-            self.db.close()
-            
-            # Insert data into treeview
-            for screen in screens:
-                self.screens_tree.insert("", "end", values=(
-                    screen["ScreenID"],
-                    screen["ScreenNumber"],
-                    screen["SeatCapacity"]
-                ))
-                
-            if not screens:
-                self.screens_tree.insert("", "end", values=("No screens found", "", ""))
-                
-        except Exception as e:
-            messagebox.showerror("Database Error", f"Failed to load screens: {e}")
-            self.screens_tree.insert("", "end", values=("Error loading data", "", ""))
-
-    def show_add_screen_dialog(self):
-        """Show dialog to add a new screen"""
-        # Create a new window
-        add_window = tk.Toplevel(self)
-        add_window.title("Add New Screen")
-        add_window.geometry("350x250")
-        add_window.resizable(False, False)
-        
-        # Get cinemas for dropdown
-        conn = self.db.connect()
-        cursor = conn.cursor()
-        cursor.execute("SELECT CinemaID, CinemaName FROM Cinemas ORDER BY CinemaName")
-        cinemas = cursor.fetchall()
-        cinema_options = [f"{cinema['CinemaID']} - {cinema['CinemaName']}" for cinema in cinemas]
-        self.db.close()
-        
-        # Cinema selection
-        tk.Label(add_window, text="Cinema:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        cinema_combo = ttk.Combobox(add_window, width=25, values=cinema_options, state="readonly")
-        if cinema_options:
-            cinema_combo.current(0)
-        cinema_combo.grid(row=0, column=1, padx=10, pady=5)
-        
-        # Screen number
-        tk.Label(add_window, text="Screen Number:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-        number_var = tk.StringVar(value="1")
-        number_spinbox = ttk.Spinbox(
-            add_window, 
-            from_=1, 
-            to=10, 
-            textvariable=number_var, 
-            width=5
-        )
-        number_spinbox.grid(row=1, column=1, padx=10, pady=5, sticky="w")
-        
-        # Seat capacity
-        tk.Label(add_window, text="Seat Capacity:").grid(row=2, column=0, padx=10, pady=5, sticky="w")
-        capacity_var = tk.StringVar(value="100")
-        capacity_spinbox = ttk.Spinbox(
-            add_window, 
-            from_=50, 
-            to=120, 
-            textvariable=capacity_var, 
-            width=5
-        )
-        capacity_spinbox.grid(row=2, column=1, padx=10, pady=5, sticky="w")
-        
-        # Add button
-        tk.Button(
-            add_window, 
-            text="Add Screen", 
-            command=lambda: self.add_screen_with_cinema(
-                cinema_combo.get().split(" - ")[0],
-                number_var.get(),
-                capacity_var.get(),
-                add_window
-            )
-        ).grid(row=3, column=0, columnspan=2, pady=20)
-
-    def add_screen_with_cinema(self, cinema_id, screen_number, capacity, window):
-        """Add a new screen to the database with cinema association"""
-        try:
-            screen_number = int(screen_number)
-            capacity = int(capacity)
-            cinema_id = int(cinema_id)
-            
-            # Validate capacity range
-            if capacity < 50 or capacity > 120:
-                messagebox.showerror("Error", "Seat capacity must be between 50 and 120")
-                return
-                
-            conn = self.db.connect()
-            cursor = conn.cursor()
-            
-            # Check if screen number already exists in this cinema
-            cursor.execute(
-                "SELECT COUNT(*) FROM Screens WHERE ScreenNumber = ? AND CinemaID = ?", 
-                (screen_number, cinema_id)
-            )
-            if cursor.fetchone()[0] > 0:
-                messagebox.showerror("Error", f"Screen {screen_number} already exists in this cinema")
-                self.db.close()
-                return
-                
-            # Add the screen with cinema association
-            cursor.execute(
-                """
-                INSERT INTO Screens (ScreenNumber, SeatCapacity, CinemaID)
-                VALUES (?, ?, ?)
-                """,
-                (screen_number, capacity, cinema_id)
-            )
-            
-            conn.commit()
-            self.db.close()
-            
-            messagebox.showinfo("Success", f"Screen {screen_number} added successfully!")
-            window.destroy()
-            self.load_all_screens()  # Reload the screens list
-            
-        except ValueError:
-            messagebox.showerror("Error", "Screen number and capacity must be numbers")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to add screen: {e}")
-
-    def show_edit_screen_dialog(self):
-        """Show dialog to edit selected screen"""
-        selected = self.screens_tree.selection()
-        if not selected:
-            messagebox.showinfo("Information", "Please select a screen to edit")
-            return
-        
-        # Get selected screen data
-        screen_id = self.screens_tree.item(selected[0], "values")[0]
-        
-        try:
-            conn = self.db.connect()
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM Screens WHERE ScreenID = ?", (screen_id,))
-            screen = cursor.fetchone()
-            self.db.close()
-            
-            if not screen:
-                messagebox.showerror("Error", "Screen not found in database")
-                return
-                
-            # Create edit dialog window
-            edit_window = tk.Toplevel(self)
-            edit_window.title(f"Edit Screen {screen['ScreenNumber']}")
-            edit_window.geometry("350x200")
-            edit_window.resizable(False, False)
-            
-            # Screen number
-            tk.Label(edit_window, text="Screen Number:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-            number_var = tk.StringVar(value=str(screen['ScreenNumber']))
-            number_spinbox = ttk.Spinbox(
-                edit_window, 
-                from_=1, 
-                to=10, 
-                textvariable=number_var, 
-                width=5
-            )
-            number_spinbox.grid(row=0, column=1, padx=10, pady=5, sticky="w")
-            
-            # Seat capacity
-            tk.Label(edit_window, text="Seat Capacity:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-            capacity_var = tk.StringVar(value=str(screen['SeatCapacity']))
-            capacity_spinbox = ttk.Spinbox(
-                edit_window, 
-                from_=50, 
-                to=120, 
-                textvariable=capacity_var, 
-                width=5
-            )
-            capacity_spinbox.grid(row=1, column=1, padx=10, pady=5, sticky="w")
-            
-            # Update button
-            tk.Button(
-                edit_window, 
-                text="Update Screen", 
-                command=lambda: self.update_screen(
-                    screen_id,
-                    number_var.get(),
-                    capacity_var.get(),
-                    edit_window
-                )
-            ).grid(row=2, column=0, columnspan=2, pady=20)
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to load screen data: {e}")
-
-    def update_screen(self, screen_id, screen_number, capacity, window):
-        """Update an existing screen in the database"""
-        try:
-            screen_number = int(screen_number)
-            capacity = int(capacity)
-            
-            # Validate capacity range
-            if capacity < 50 or capacity > 120:
-                messagebox.showerror("Error", "Seat capacity must be between 50 and 120")
-                return
-                
-            conn = self.db.connect()
-            cursor = conn.cursor()
-            
-            # Check if screen number already exists (excluding current screen)
-            cursor.execute(
-                "SELECT COUNT(*) FROM Screens WHERE ScreenNumber = ? AND ScreenID != ?", 
-                (screen_number, screen_id)
-            )
-            if cursor.fetchone()[0] > 0:
-                messagebox.showerror("Error", f"Screen {screen_number} already exists")
-                self.db.close()
-                return
-                
-            # Update the screen
-            cursor.execute(
-                """
-                UPDATE Screens 
-                SET ScreenNumber = ?, SeatCapacity = ?
-                WHERE ScreenID = ?
-                """,
-                (screen_number, capacity, screen_id)
-            )
-            
-            conn.commit()
-            self.db.close()
-            
-            messagebox.showinfo("Success", f"Screen deleted successfully!")
-            window.destroy()
-            self.load_all_screens()  # Reload the screens list
-            
-        except ValueError:
-            messagebox.showerror("Error", "Screen number and capacity must be numbers")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to update screen: {e}")
-
-    def delete_screen(self):
-        """Delete the selected screen"""
-        selected = self.screens_tree.selection()
-        if not selected:
-            messagebox.showinfo("Information", "Please select a screen to delete")
-            return
-            
-        # Get selected screen data
-        screen_id = self.screens_tree.item(selected[0], "values")[0]
-        screen_number = self.screens_tree.item(selected[0], "values")[1]
-        
-        # Confirm deletion
-        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete Screen {screen_number}?"):
-            try:
-                conn = self.db.connect()
-                cursor = conn.cursor()
-                
-                # Check if screen has any screenings
-                cursor.execute("SELECT COUNT(*) FROM Screenings WHERE ScreenID = ?", (screen_id,))
-                screening_count = cursor.fetchone()[0]
-                
-                if screening_count > 0:
-                    if not messagebox.askyesno("Warning", f"This screen has {screening_count} screenings scheduled. Deleting it will also delete all associated screenings and bookings. Continue?"):
-                        self.db.close()
-                        return
-                
-                # Delete the screen (cascade will handle related records)
-                cursor.execute("DELETE FROM Screens WHERE ScreenID = ?", (screen_id,))
-                conn.commit()
-                self.db.close()
-                
-                messagebox.showinfo("Success", f"Screen deleted successfully!")
-                self.load_all_screens()  # Reload the screens list
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to delete screen: {e}")
+    def refresh_screenings_cinema_list(self):
+        """Refresh the cinema selection interface if it's currently visible"""
+        # Check if we're on the screenings tab and the screenings_frame exists
+        if hasattr(self, 'screenings_frame'):
+            # Check if we're currently showing the cinema selection interface
+            # Look for the title label that contains "Select a Cinema"
+            for widget in self.screenings_frame.winfo_children():
+                if isinstance(widget, tk.Label) and "Select a Cinema" in widget.cget("text"):
+                    # We're on the cinema selection interface, so refresh it
+                    self.show_cinema_selection_interface()
+                    break

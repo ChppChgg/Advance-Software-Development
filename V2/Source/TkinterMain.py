@@ -82,26 +82,59 @@ class HorizonCinemas(tk.Tk):
     def login(self, username, role):
         """Handle user login"""
         self.user = username
-        self.user_role = role  # Store the specific role
-        self.is_manager = (role.lower() == 'manager')  # Make comparison case-insensitive
+        self.user_role = role
+        self.is_manager = (role.lower() == 'manager')
+        
+        # Show home page and refresh it to display user info
         self.show_frame("HomePage")
+        self.frames["HomePage"].refresh()
     
     def logout(self):
         """Handle user logout"""
         self.user = None
+        self.user_role = None
         self.is_manager = False
+        
+        # Show home page and refresh it to clear user info
         self.show_frame("HomePage")
+        self.frames["HomePage"].refresh()
+    
+    def get_user_name(self):
+        """Return the current username or Guest if not logged in"""
+        return self.user if self.user else "Guest"
+    
+    def get_user_role(self):
+        """Return the current user role or N/A if not logged in"""
+        return self.user_role if self.user_role else "N/A"
+    
+    def get_user_cinema(self):
+        """Return the cinema associated with the current user"""
+        if not self.user:
+            return "N/A"
+        
+        # Admin and Manager have access to all cinemas
+        if self.user_role and self.user_role.lower() in ["admin", "manager"]:
+            return "ALL"
+        
+        # For staff, get their specific cinema
+        db = Database()
+        cinema_id = db.get_cinema_id_by_username(self.user)
+        if cinema_id:
+            conn = db.connect()
+            cursor = conn.cursor()
+            cursor.execute("SELECT CinemaName FROM Cinemas WHERE CinemaID = ?", (cinema_id,))
+            cinema = cursor.fetchone()
+            db.close()
+            return cinema['CinemaName'] if cinema else "N/A"
+        
+        return "N/A"
 
 def run_application():
     """Function to run the Horizon Cinemas application"""
     db = Database()
-    #load films
     db.insert_initial_films()
-    #load cinemas
     db.generate_cinemas()
-    #load screens
     db.populate_screens()
-    #load screenings
     db.initial_screenings()
     app = HorizonCinemas()
     app.mainloop()
@@ -109,5 +142,4 @@ def run_application():
 
 if __name__ == "__main__":
     db = Database()
-    db.add_cinema_id_to_screens()
     run_application()

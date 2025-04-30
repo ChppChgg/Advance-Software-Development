@@ -23,7 +23,7 @@ class Database:
     def connect(self):
         """Create a database connection"""
         self.connection = sqlite3.connect(self.db_path)
-        self.connection.row_factory = sqlite3.Row  # Enable row access by column name
+        self.connection.row_factory = sqlite3.Row  
         return self.connection
         
     def close(self):
@@ -103,7 +103,7 @@ class Database:
                 FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE         
             );
 
-            --  Customers who book tickets (could also reference Users)
+            --  Customers who book tickets 
             CREATE TABLE IF NOT EXISTS Customers (
                 CustomerID INTEGER PRIMARY KEY AUTOINCREMENT,
                 FullName Text NOT NULL,
@@ -456,97 +456,95 @@ class Database:
             self.close()
 
     def initial_screenings(self):
-        screenings = [
-            (1, 1, "09:00", "11:00"),
-            (6, 1, "11:00", "13:30"),
-            (2, 1, "13:30", "16:00"),
-            (3, 1, "16:00", "18:00"),
-            (5, 1, "18:00", "20:00"),
-            (4, 1, "20:00", "22:00"),
-            (1, 2, "11:00", "13:00"),
-            (6, 2, "13:00", "15:30"),
-            (2, 2, "15:30", "18:00"),
-            (3, 2, "18:00", "20:00"),
-            (5, 2, "20:00", "22:00"),
-            (4, 2, "22:00", "00:00"),
-            (4, 3, "09:00", "11:00"),
-            (1, 3, "13:00", "15:00"),
-            (6, 3, "15:00", "17:30"),
-            (2, 3, "17:30", "20:00"),
-            (3, 3, "20:00", "22:00"),
-            (5, 3, "22:00", "00:00"),
-            (5, 4, "09:00", "11:00"),
-            (4, 4, "11:00", "13:00"),
-            (1, 4, "15:00", "17:00"),
-            (6, 4, "17:00", "19:30"),
-            (2, 4, "19:30", "22:00"),
-            (3, 4, "22:00", "00:00"),
-            (3, 5, "09:00", "11:00"),
-            (5, 5, "11:00", "13:00"),
-            (4, 5, "13:00", "15:00"),
-            (1, 5, "17:00", "19:00"),
-            (6, 5, "19:00", "21:30"),
-            (2, 5, "21:30", "00:00"),
-            (2, 6, "09:00", "11:30"),
-            (3, 6, "11:30", "13:30"),
-            (5, 6, "13:30", "15:30"),
-            (4, 6, "15:30", "17:30"),
-            (1, 6, "19:30", "21:30"),
-            (6, 6, "21:30", "00:00")
-        ]
-
+        """Create screenings for each cinema's screens"""
         try:
             self.connect()
             cursor = self.connection.cursor()
+            
+            # Get all cinemas
+            cursor.execute("SELECT CinemaID, CinemaName FROM Cinemas")
+            cinemas = cursor.fetchall()
+            
+            # Template for screenings (film_id, screen_number, start_time, end_time)
+            screening_templates = [
+                # Screen 1 screenings
+                (1, 1, "09:00", "11:00"),
+                (2, 1, "13:30", "16:00"),
+                (3, 1, "16:00", "18:00"),
+                (5, 1, "18:00", "20:00"),
+                (4, 1, "20:00", "22:00"),
+                
+                # Screen 2 screenings
+                (1, 2, "11:00", "13:00"),
+                (2, 2, "15:30", "18:00"),
+                (3, 2, "18:00", "20:00"),
+                (5, 2, "20:00", "22:00"),
+                
+                # Screen 3 screenings
+                (4, 3, "09:00", "11:00"),
+                (1, 3, "13:00", "15:00"),
+                (3, 3, "20:00", "22:00"),
+                
+                # Screen 4 screenings
+                (5, 4, "09:00", "11:00"),
+                (4, 4, "11:00", "13:00"),
+                (1, 4, "15:00", "17:00"),
+                
+                # Screen 5 screenings
+                (3, 5, "09:00", "11:00"),
+                (5, 5, "11:00", "13:00"),
+                (4, 5, "13:00", "15:00"),
+                
+                # Screen 6 screenings
+                (2, 6, "09:00", "11:30"),
+                (3, 6, "11:30", "13:30"),
+                (5, 6, "13:30", "15:30")
+            ]
 
-            # Create the table if it doesn't exist
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS Screenings (
-                    ScreeningID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    FilmID INTEGER NOT NULL,
-                    ScreenID INTEGER NOT NULL,
-                    StartTime TIME NOT NULL,
-                    EndTime TIME NOT NULL,
-                    TotalSeats INTEGER NOT NULL,
-                    VIPSeats INTEGER NOT NULL DEFAULT 10,
-                    LowerSeats INTEGER NOT NULL,
-                    UpperSeats INTEGER NOT NULL,
-                    FOREIGN KEY (TotalSeats) REFERENCES Screens(SeatCapacity) ON DELETE CASCADE,
-                    FOREIGN KEY (FilmID) REFERENCES Films(FilmID) ON DELETE CASCADE,
-                    FOREIGN KEY (ScreenID) REFERENCES Screens(ScreenID) ON DELETE CASCADE
-                );
-            ''')
-
-            for film_id, screen_id, start_time, end_time in screenings:
-                # Get the total seat capacity for this screen
-                cursor.execute("SELECT SeatCapacity FROM Screens WHERE ScreenID = ?", (screen_id,))
-                result = cursor.fetchone()
-                if not result:
-                    print(f"ScreenID {screen_id} not found, skipping.")
-                    continue
-
-                total_seats = result[0]
-                vip_seats = 10
-                lower_seats = int(total_seats * 0.3)
-                upper_seats = total_seats - vip_seats - lower_seats
-
-                # Check for duplicate screening
-                cursor.execute('''
-                    SELECT COUNT(*) FROM Screenings
-                    WHERE FilmID = ? AND ScreenID = ? AND StartTime = ? AND EndTime = ?
-                ''', (film_id, screen_id, start_time, end_time))
-
-                if cursor.fetchone()[0] == 0:
+            # For each cinema, create screenings for its screens
+            for cinema in cinemas:
+                cinema_id = cinema['CinemaID']
+                cinema_name = cinema['CinemaName']
+                print(f"Creating screenings for {cinema_name}...")
+                
+                # For each screening template
+                for film_id, screen_number, start_time, end_time in screening_templates:
+                    # Find the actual screen ID for this cinema's screen number
+                    cursor.execute(
+                        "SELECT ScreenID, SeatCapacity FROM Screens WHERE ScreenNumber = ? AND CinemaID = ?", 
+                        (screen_number, cinema_id)
+                    )
+                    screen_result = cursor.fetchone()
+                    
+                    if not screen_result:
+                        print(f"Screen #{screen_number} not found for {cinema_name}, skipping.")
+                        continue
+                        
+                    screen_id = screen_result['ScreenID']
+                    total_seats = screen_result['SeatCapacity']
+                    
+                    # Calculate seat distributions
+                    vip_seats = 10
+                    lower_seats = int(total_seats * 0.3)
+                    upper_seats = total_seats - vip_seats - lower_seats
+                    
+                    # Check for duplicate screening
                     cursor.execute('''
-                        INSERT INTO Screenings (FilmID, ScreenID, StartTime, EndTime, TotalSeats, VIPSeats, LowerSeats, UpperSeats)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (film_id, screen_id, start_time, end_time, total_seats, vip_seats, lower_seats, upper_seats))
+                        SELECT COUNT(*) FROM Screenings
+                        WHERE FilmID = ? AND ScreenID = ? AND StartTime = ? AND EndTime = ?
+                    ''', (film_id, screen_id, start_time, end_time))
+                    
+                    if cursor.fetchone()[0] == 0:
+                        cursor.execute('''
+                            INSERT INTO Screenings (FilmID, ScreenID, StartTime, EndTime, TotalSeats, VIPSeats, LowerSeats, UpperSeats)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (film_id, screen_id, start_time, end_time, total_seats, vip_seats, lower_seats, upper_seats))
 
             self.connection.commit()
-            print("Screenings inserted successfully.")
-
+            print("Screenings created successfully for all cinemas.")
+            
         except Exception as e:
-            print("Error inserting screenings:", e)
+            print(f"Error creating screenings: {e}")
         finally:
             self.close()
 
@@ -915,6 +913,7 @@ class Database:
 
         self.close()
         return user
+    
 
 
 

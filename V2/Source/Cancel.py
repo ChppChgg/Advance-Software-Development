@@ -117,11 +117,8 @@ class CancellationPage(BasePage):
             
             # Get bookings based on role and cinema assignment
             if user_role in ["Admin", "Manager"]:
-                # Admins and managers can see all bookings if they want
-                if messagebox.askyesno("Booking Selection", "Do you want to see bookings from all cinemas?"):
-                    bookings = db.get_bookings(cinema_id=None, include_details=True)
-                else:
-                    bookings = db.get_bookings(cinema_id=cinema_id, include_details=True)
+                # Admins and managers automatically see all bookings across all cinemas
+                bookings = db.get_bookings(cinema_id=None, include_details=True)
             else:
                 # Staff can only see bookings from their cinema
                 bookings = db.get_bookings(cinema_id=cinema_id, include_details=True)

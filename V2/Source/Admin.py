@@ -113,14 +113,6 @@ class AdminPage(BasePage):
         )
         delete_button.pack(pady=5)
         
-        # Add refresh button
-        refresh_button = tk.Button(
-            control_frame,
-            text="Refresh List",
-            width=15,
-            command=self.load_films_data
-        )
-        refresh_button.pack(pady=5)
 
     def load_films_data(self):
         """Load film data from database into treeview"""
@@ -202,7 +194,8 @@ class AdminPage(BasePage):
             if film_id:
                 messagebox.showinfo("Success", f"Film '{title}' added successfully!")
                 window.destroy()
-                self.load_films_data()  # Reload the films list
+                self.load_films_data()
+                self.refresh_movie_list_page()
             else:
                 messagebox.showerror("Error", "Failed to add film")
         except ValueError:
@@ -310,7 +303,8 @@ class AdminPage(BasePage):
             
             messagebox.showinfo("Success", f"Film '{title}' updated successfully!")
             window.destroy()
-            self.load_films_data()  # Reload the films list
+            self.load_films_data()
+            self.refresh_movie_list_page()
         except ValueError:
             messagebox.showerror("Error", "Duration must be a number")
         except Exception as e:
@@ -348,9 +342,23 @@ class AdminPage(BasePage):
                 self.db.close()
                 
                 messagebox.showinfo("Success", f"Film '{film_title}' deleted successfully!")
-                self.load_films_data()  # Reload the films list
+                self.load_films_data()
+                self.refresh_movie_list_page()  
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete film: {e}")
+
+
+
+    def refresh_movie_list_page(self):
+        """Refresh the MovieListPage if it exists in the controller's frames"""
+        for frame_name, frame in self.controller.frames.items():
+            if frame_name == "MovieListPage":
+                new_page = frame.__class__(self.controller.container, self.controller)
+                self.controller.frames[frame_name] = new_page
+                new_page.grid(row=0, column=0, sticky="nsew")
+                break
+
+
 
     def setup_reports_tab(self, parent):
         """Set up the reports tab"""

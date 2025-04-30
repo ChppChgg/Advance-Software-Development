@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 from Basepage import BasePage
 from Utility import COLORS, FONTS
 from Database import Database
-
+from Home import HomePage
 #Harry Elson, 23021935
 #Matt Nogodula, 23015215
 #Jerry Lin, 23024553
@@ -110,16 +110,13 @@ class LoginPage(BasePage):
         user = self.db.authenticate_user(username, password)
         
         if user:
-            # Clear any error messages
+            # Clear any error messages and reset form
             self.error_label.config(text="")
-            
-            # Reset form
             self.username_entry.delete(0, 'end')
             self.password_entry.delete(0, 'end')
             
-            # Login the user through the controller with specific role
+            # Login the user (this will refresh homepage)
             self.controller.login(user['Username'], user['RoleName'])
-            
             messagebox.showinfo("Login Successful", f"Welcome back, {user['Username']}!")
         else:
             self.error_label.config(text="Invalid username or password")

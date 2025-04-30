@@ -73,6 +73,7 @@ class BasePage(tk.Frame):
         self.sidebar_logout_frame = tk.Frame(self.sidebar_frame, bg=COLORS["SIDEBAR_BG"])
         self.sidebar_logout_frame.pack(fill="x", side="bottom", pady=10)
 
+
         self.nav_buttons = {}
         
         # Content frame - this will be filled by child classes
