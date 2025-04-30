@@ -610,7 +610,7 @@ class Database:
                     Status,
                     CancellationFee
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (customer_id, user_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, status, cancellationfee))
+            """, (user_id, customer_id, cinema_id, screening_id, booking_ref, total_price, bookingdate, status, cancellationfee))
             booking_id = cursor.lastrowid
             self.connection.commit()
         except Exception as e:
