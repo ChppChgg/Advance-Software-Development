@@ -1,5 +1,0 @@
-You may to download the following;
-
--tkcalendar
-"pip install tkcalendar"
-

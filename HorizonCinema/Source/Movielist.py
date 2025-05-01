@@ -52,7 +52,7 @@ class MovieListPage(BasePage):
 
             # Generate expected image filename
             expected_image = f"{movie['Title'].lower().replace(' ', '')}.jfif"
-            poster_path = f"V2/Source/images/{expected_image}"
+            poster_path = f"HorizonCinema/Source/images/{expected_image}"
 
             try:
                 # Try to load the image
@@ -154,7 +154,7 @@ class MovieListPage(BasePage):
 
             # Generate expected image filename
             expected_image = f"{movie['Title'].lower().replace(' ', '')}.jfif"
-            poster_path = f"V2/Source/images/{expected_image}"
+            poster_path = f"HorizonCinema/Source/images/{expected_image}"
 
             try:
                 # Try to load the image

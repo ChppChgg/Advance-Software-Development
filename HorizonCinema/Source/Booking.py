@@ -5,6 +5,9 @@ from Basepage import BasePage
 from Database import Database
 from datetime import datetime, timedelta
 import uuid
+import os
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 #Harry Elson, 23021935
 #Matt Nogodula, 23015215
@@ -268,38 +271,24 @@ class BookingPage(BasePage):
     def booking_placeholder(self):
         try:
             db = Database("horizon_cinemas.db")
-
             quantity = int(self.ticket_spinbox.get())
-
             full_name = self.name_entry.get().strip()
-            
             email = self.email_entry.get().strip()
-
             username = self.current_username
-
             user = db.get_user_by_username(self.current_username)
             if user:
                   user_id = user['UserID']
             else:
                 messagebox.showerror("Error", "User not found.")
                 return
-
-
-            # Get selected cinema and film
             cinema_idx = self.cinema_combo.current()
             cinema_id = self.cinema_data[cinema_idx]['CinemaID']
             if not self.validate_user_cinema(cinema_id):
               return
-
-
             film_idx = self.film_combo.current()
             film_id = self.film_data[film_idx]['FilmID']
-
-            # Get selected date and time
             show_date = self.date_entry.get_date().strftime("%Y-%m-%d")
             show_time = self.time_combo.get()
-
-            # Find matching screening ID
             screenings = db.get_screenings_by_film(film_id)
             matching_screening = next(
                 (s for s in screenings if s['StartTime'] == show_time), None
@@ -307,53 +296,32 @@ class BookingPage(BasePage):
             if not matching_screening:
                 messagebox.showerror("Error", "No matching screening found.")
                 return
-
             screening_id = matching_screening['ScreeningID']
             screen_id = matching_screening['ScreenID']
-
             screen_info = db.get_screen_info(screen_id)
             if not screen_info:
                 messagebox.showerror("Error", "Screen information not found.")
                 return
-
             total_seats = screen_info['SeatCapacity']
-
-            # Get seat type and quantity from user
             seat_type = self.seat_combo.get()
             seat_type = seat_type.replace("Lower Hall", "Lower").replace("Upper Gallery", "Upper")
             quantity = int(self.ticket_spinbox.get())
-
-            # Get seat limits from the Screening info
             max_vip = 10
             max_lower = int(total_seats * 0.3)
             max_upper = total_seats - max_lower - max_vip
-
-            # Get currently booked seats for this screening on this date
             booked_seats = db.get_booked_seat_counts(screening_id, show_date, cinema_id)
             already_booked = booked_seats.get(seat_type, 0)
-
-            # Determine max seats allowed based on seat type
             seat_limits = {'VIP': max_vip, 'Lower': max_lower, 'Upper': max_upper}
             remaining = seat_limits[seat_type] - already_booked
-
             if quantity > remaining:
                 messagebox.showerror("Booking Error", f"Only {remaining} {seat_type} seats available.")
                 return
-
-            # Total price and cancel fee
             total_price = float(self.price_var.get().replace("£", ""))
             cancellationfee = (total_price/2)
-
-            # Generate unique booking reference
             booking_ref = str(uuid.uuid4())[:8].upper() 
-
             bookingdate = self.date_entry.get_date().strftime("%Y-%m-%d")
-
             status = 'active'
-
             customer_id = db.add_customer(full_name, email)
-    
-            # Insert booking into bookings table
             booking_id = db.insert_booking(
                 customer_id=customer_id,
                 user_id=user_id,
@@ -365,11 +333,66 @@ class BookingPage(BasePage):
                 bookingdate=bookingdate,
                 status=status
             )
-            # insert booking seats
             for _ in range(quantity):
                 db.insert_booking_seat(booking_id, seat_type)
-
-            messagebox.showinfo("Success", f"Booking successful!\nReference: {booking_ref}")
-
+            
+            film_title = self.film_data[film_idx]['Title']
+            cinema_name = self.cinema_data[cinema_idx]['CinemaName']
+            receipt_path = self.generate_receipt(
+                booking_id=booking_id,
+                booking_ref=booking_ref,
+                customer_name=full_name,
+                email=email,
+                total_price=total_price,
+                film_title=film_title,
+                cinema_name=cinema_name,
+                show_date=show_date,
+                show_time=show_time,
+                quantity=quantity,
+                seat_type=seat_type
+            )
+            messagebox.showinfo("Success", f"Booking successful!\nReference: {booking_ref}\nReceipt saved to: {receipt_path}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save booking:\n{e}")
+
+    def generate_receipt(self, booking_id, booking_ref, customer_name, email, total_price, film_title, cinema_name, show_date, show_time, quantity, seat_type):
+        receipt_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Receipts")
+        if not os.path.exists(receipt_dir):
+            os.makedirs(receipt_dir)
+        safe_name = "".join(c for c in customer_name if c.isalnum() or c in [' ', '_']).strip().replace(' ', '_')
+        filename = f"{safe_name}_Receipt.pdf"
+        filepath = os.path.join(receipt_dir, filename)
+        c = canvas.Canvas(filepath, pagesize=letter)
+        width, height = letter
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(50, height - 50, "Horizon Cinema - Booking Receipt")
+        c.line(50, height - 70, width - 50, height - 70)
+        c.setFont("Helvetica", 12)
+        y = height - 100
+        c.drawString(50, y, f"Booking Reference: {booking_ref}")
+        y -= 20
+        c.drawString(50, y, f"Customer Name: {customer_name}")
+        y -= 20
+        c.drawString(50, y, f"Email: {email}")
+        y -= 20
+        c.drawString(50, y, f"Date: {show_date}")
+        y -= 20
+        c.drawString(50, y, f"Time: {show_time}")
+        y -= 20
+        c.drawString(50, y, f"Cinema: {cinema_name}")
+        y -= 20
+        c.drawString(50, y, f"Film: {film_title}")
+        y -= 20
+        c.drawString(50, y, f"Seat Type: {seat_type}")
+        y -= 20
+        c.drawString(50, y, f"Quantity: {quantity}")
+        y -= 30
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(50, y, f"Total Price: £{total_price:.2f}")
+        y -= 20
+        c.line(50, y, width - 50, y)
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 50, "Thank you for choosing Horizon Cinema!")
+        c.drawString(50, 30, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        c.save()
+        return filepath
